@@ -1,0 +1,253 @@
+package com.jerolba.avro.record;
+
+import static org.apache.avro.Schema.Type.ARRAY;
+import static org.apache.avro.Schema.Type.RECORD;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.RecordComponent;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
+import org.apache.avro.generic.GenericRecord;
+
+public class AvroRecord2JavaRecord<T> {
+
+    private static final Set<String> SIMPLE_MAPPER = Set.of("int", "java.lang.Integer", "long", "java.lang.Long",
+            "double", "java.lang.Double", "float", "java.lang.Float", "boolean", "java.lang.Boolean");
+
+    private final RecordInfo recordInfo;
+
+    private record RecordInfo(Constructor<?> constructor, List<Function<GenericRecord, Object>> mappers) {
+    }
+
+    public AvroRecord2JavaRecord(Class<T> recordClass, Schema schema) {
+        this.recordInfo = buildRecordInfo(recordClass, schema);
+    }
+
+    public T mapMainRecord(GenericRecord record) {
+        return (T) map(recordInfo, record);
+    }
+
+    private RecordInfo buildRecordInfo(Class<?> recordClass, Schema schema) {
+        if (!recordClass.isRecord()) {
+            throw new IllegalArgumentException(recordClass.getName() + " is not a Java Record");
+        }
+        List<Function<GenericRecord, Object>> mappers = new ArrayList<>();
+        for (RecordComponent recordComponent : recordClass.getRecordComponents()) {
+            // Review adding aliasing
+            Field field = schema.getField(recordComponent.getName());
+            mappers.add(buildMapperForField(recordComponent, field));
+        }
+        return new RecordInfo(findConstructor(recordClass), mappers);
+    }
+
+    private Constructor<?> findConstructor(Class<?> recordClass) {
+        Object[] componentsTypes = Stream.of(recordClass.getRecordComponents()).map(RecordComponent::getType).toArray();
+        Constructor<?>[] declaredConstructors = recordClass.getDeclaredConstructors();
+        for (var c : declaredConstructors) {
+            Class<?>[] parameterTypes = c.getParameterTypes();
+            if (Arrays.equals(componentsTypes, parameterTypes, (c1, c2) -> c1.equals(c2) ? 0 : 1)) {
+                return c;
+            }
+        }
+        throw new RuntimeException(recordClass.getName() + " record has an invalid constructor");
+    }
+
+    private Function<GenericRecord, Object> buildMapperForField(RecordComponent recordComponent, Field avroField) {
+        Class<?> attrJavaType = recordComponent.getType();
+        if (avroField == null) {
+            return getMissingParquetAttr(attrJavaType.getName());
+        }
+        var avroAttr = inspectNullable(avroField);
+        if (avroAttr.isRecord()) {
+            return getRecordTypeMapper(attrJavaType, avroField, avroAttr.schema());
+        }
+        Type genericType = recordComponent.getGenericType();
+        if (genericType instanceof TypeVariable<?>) {
+            throw new RuntimeException("Generic type <" + genericType.toString() + "> not supported in records");
+        } else if (genericType instanceof ParameterizedType) {
+            Type listType = getListCollectionType(recordComponent, avroField, avroAttr);
+            return new ArrayMapper((Class<?>) listType, avroField, avroAttr.schema().getElementType()).getMapper();
+        }
+        return getSimpleTypeMapper(attrJavaType, avroField.pos());
+    }
+
+    private Function<GenericRecord, Object> getRecordTypeMapper(Class<?> javaType, Field avroField, Schema childSchema) {
+        RecordInfo recursiveRecordInfo = buildRecordInfo(javaType, childSchema);
+        return parentRecord -> {
+            GenericRecord childRecord = (GenericRecord) parentRecord.get(avroField.pos());
+            return childRecord != null ? map(recursiveRecordInfo, childRecord) : null;
+        };
+    }
+
+    private Type getListCollectionType(RecordComponent recordComponent, Field field, AvroFieldAnalysis fieldAnal) {
+        ParameterizedType paramType = (ParameterizedType) recordComponent.getGenericType();
+        Class<?> parametizedClass = (Class<?>) paramType.getRawType();
+        if (!Collection.class.isAssignableFrom(parametizedClass)) {
+            throw new RuntimeException("Invalid collection type " + paramType.getRawType());
+        }
+        Type listType = paramType.getActualTypeArguments()[0];
+        if (!(listType instanceof Class<?>)) {
+            throw new RuntimeException("Invalid type " + parametizedClass + " as " + listType);
+        }
+        if (!fieldAnal.isArray()) {
+            throw new RuntimeException("Invalid parquet type " + field.schema().getType() + ", expected Array");
+        }
+        return listType;
+    }
+
+    record AvroFieldAnalysis(boolean nullable, Schema schema) {
+
+        boolean isRecord() {
+            return schema.getType() == RECORD;
+        }
+
+        boolean isArray() {
+            return schema.getType() == ARRAY;
+        }
+    }
+
+    private AvroFieldAnalysis inspectNullable(Field avroField) {
+        if (!avroField.schema().isNullable()) {
+            return new AvroFieldAnalysis(false, avroField.schema());
+        }
+        for (Schema schema : avroField.schema().getTypes()) {
+            if (!schema.isNullable()) {
+                return new AvroFieldAnalysis(true, schema);
+            }
+        }
+        return null;
+    }
+
+    private Object map(RecordInfo recordInfo, GenericRecord record) {
+        Object[] values = recordInfo.mappers().stream().map(m -> m.apply(record)).toArray();
+        try {
+            return recordInfo.constructor().newInstance(values);
+        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Function<GenericRecord, Object> getSimpleTypeMapper(Class<?> type, int pos) {
+        if (type.equals(java.lang.String.class)) {
+            return record -> {
+                Object v = record.get(pos);
+                return v == null ? null : v.toString();
+            };
+        }
+        if (SIMPLE_MAPPER.contains(type.getName())) {
+            return record -> record.get(pos);
+        }
+        if (type.isEnum()) {
+            Class<? extends Enum> asEnum = type.asSubclass(Enum.class);
+            return record -> {
+                Object v = record.get(pos);
+                return v == null ? null : Enum.valueOf(asEnum, v.toString());
+            };
+        }
+        throw new RuntimeException(type + " type not supported");
+    }
+
+    private class ArrayMapper {
+
+        private final Class<?> listType;
+        private final Schema schema;
+        private final int pos;
+
+        ArrayMapper(Class<?> listType, Field avroArrayField, Schema schema) {
+            this.listType = listType;
+            this.schema = schema;
+            this.pos = avroArrayField.pos();
+        }
+
+        Function<GenericRecord, Object> getMapper() {
+            if (schema.getType() == RECORD) {
+                return getArrayRecordTypeMapper();
+            }
+            return getArraySimpleTypeMapper();
+        }
+
+        private Function<GenericRecord, Object> getArrayRecordTypeMapper() {
+            RecordInfo recursiveRecordInfo = buildRecordInfo(listType, schema);
+            return parentRecord -> {
+                Object arrayget = parentRecord.get(pos);
+                if (arrayget == null) {
+                    return null;
+                }
+                List<Object> res = new ArrayList<>();
+                Collection<GenericRecord> array = (Collection<GenericRecord>) arrayget;
+                for (GenericRecord genericRecord : array) {
+                    res.add(map(recursiveRecordInfo, genericRecord));
+                }
+                return res;
+            };
+        }
+
+        private Function<GenericRecord, Object> getArraySimpleTypeMapper() {
+            var avroType = schema.getType();
+            // TODO: check compatibility between avroType and listType
+            if (listType.equals(java.lang.String.class)) {
+                return mapIfNotNull(this::mapListStrings);
+            } else if (SIMPLE_MAPPER.contains(listType.getName())) {
+                return mapIfNotNull(ArrayList::new);
+            } else if (listType.isEnum()) {
+                Class<? extends Enum> asEnum = listType.asSubclass(Enum.class);
+                return mapIfNotNull(c -> mapListEnum(c, asEnum));
+            }
+            throw new RuntimeException("Array type not supported " + listType.getName());
+        }
+
+        private Function<GenericRecord, Object> mapIfNotNull(Function<Collection<?>, List<?>> mapper) {
+            return parentRecord -> {
+                Object arrayget = parentRecord.get(pos);
+                return arrayget == null ? null : mapper.apply((Collection<?>) arrayget);
+            };
+        }
+
+        private List<?> mapListStrings(Collection<?> collection) {
+            List<Object> res = new ArrayList<>();
+            for (var e : collection) {
+                res.add(e == null ? null : e.toString());
+            }
+            return res;
+        }
+
+        private List<?> mapListEnum(Collection<?> collection, Class<? extends Enum> asEnum) {
+            List<Object> res = new ArrayList<>();
+            for (var e : collection) {
+                res.add(e == null ? null : Enum.valueOf(asEnum, e.toString()));
+            }
+            return res;
+        }
+    }
+
+    private Function<GenericRecord, Object> getMissingParquetAttr(String type) {
+        switch (type) {
+        case "java.lang.String":
+            return r -> null;
+        case "int", "java.lang.Integer":
+            return r -> 0;
+        case "long", "java.lang.Long":
+            return r -> 0L;
+        case "double", "java.lang.Double":
+            return r -> 0.0;
+        case "float", "java.lang.Float":
+            return r -> 0.0F;
+        case "boolean", "java.lang.Boolean":
+            return r -> false;
+        }
+        return r -> null;
+    }
+
+}

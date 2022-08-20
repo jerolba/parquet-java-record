@@ -1,0 +1,4 @@
+rootProject.name = 'parquet-java-record'
+
+include 'parquet-record'
+include 'avro-record'
