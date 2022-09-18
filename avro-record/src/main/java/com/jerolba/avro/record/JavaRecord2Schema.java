@@ -1,3 +1,18 @@
+/**
+ * Copyright 2022 Jerónimo López Bezanilla
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.jerolba.avro.record;
 
 import java.lang.reflect.ParameterizedType;
@@ -25,7 +40,7 @@ public class JavaRecord2Schema {
         return build(recordClass, visited);
     }
 
-    public Schema build(Class<?> recordClass, Set<Class<?>> visited) {
+    private Schema build(Class<?> recordClass, Set<Class<?>> visited) {
         if (!recordClass.isRecord()) {
             throw new RuntimeException(recordClass.getName() + " must be a java Record");
         }
@@ -55,7 +70,8 @@ public class JavaRecord2Schema {
                 }
                 fields = typeDef.apply(beginType).noDefault();
             } else if (type.isEnum()) {
-                fields = fieldBuilder.type().nullable().enumeration(type.getSimpleName()).symbols(enumSymbols(type)).noDefault();
+                fields = fieldBuilder.type().nullable().enumeration(type.getSimpleName())
+                        .symbols(enumSymbols(type)).noDefault();
             } else {
                 fields = compositeSchema(attr, fieldBuilder, visited);
             }
@@ -71,7 +87,8 @@ public class JavaRecord2Schema {
 
     private Function<BaseFieldTypeBuilder<Schema>, FieldDefault<Schema, ?>> buildTypeDef(Class<?> type) {
         return switch (type.getName()) {
-        case "short", "java.lang.Short", "int", "java.lang.Integer", "byte", "java.lang.Byte" -> BaseFieldTypeBuilder::intType;
+        case "short", "java.lang.Short", "int", "java.lang.Integer" -> BaseFieldTypeBuilder::intType;
+        case "byte", "java.lang.Byte" -> BaseFieldTypeBuilder::intType;
         case "long", "java.lang.Long" -> BaseFieldTypeBuilder::longType;
         case "float", "java.lang.Float" -> BaseFieldTypeBuilder::floatType;
         case "double", "java.lang.Double" -> BaseFieldTypeBuilder::doubleType;
@@ -81,7 +98,9 @@ public class JavaRecord2Schema {
         };
     }
 
-    private FieldAssembler<Schema> compositeSchema(RecordComponent attr, FieldBuilder<Schema> fieldBuilder, Set<Class<?>> visited) {
+    private FieldAssembler<Schema> compositeSchema(RecordComponent attr, FieldBuilder<Schema> fieldBuilder,
+            Set<Class<?>> visited) {
+
         Class<?> attrType = attr.getType();
         if (attrType.isRecord()) {
             Schema subSchema = build(attrType, visited);
@@ -94,8 +113,8 @@ public class JavaRecord2Schema {
         if (genericType instanceof TypeVariable<?>) {
             throw new RuntimeException(genericType.toString() + " generic types not supported");
         }
-        if (genericType instanceof ParameterizedType) {
-            Schema subSchema = childCollection((ParameterizedType) genericType, visited);
+        if (genericType instanceof ParameterizedType paramType) {
+            Schema subSchema = childCollection(paramType, visited);
             return fieldBuilder.type().unionOf().nullType().and().type(subSchema).endUnion().noDefault();
         }
         return null;

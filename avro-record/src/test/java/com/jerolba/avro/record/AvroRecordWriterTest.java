@@ -1,17 +1,34 @@
+/**
+ * Copyright 2022 Jerónimo López Bezanilla
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.jerolba.avro.record;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-public class RecordWriterTest {
+public class AvroRecordWriterTest {
 
     public enum OrgType {
         FOO, BAR, BAZ
@@ -27,11 +44,10 @@ public class RecordWriterTest {
 
     @Test
     void empryFile() throws IOException {
-        var writer = new AvroRecordWriter<>(PrimitivesAndObjects.class);
-        writer.write("/tmp/emptyFile.avro", List.of());
+        var writerTest = new AvroWriterTest<>("/tmp/emptyFile.avro", PrimitivesAndObjects.class);
+        writerTest.write();
 
-        var reader = new AvroRecordReader<>("/tmp/emptyFile.avro", PrimitivesAndObjects.class);
-        var it = reader.iterator();
+        var it = writerTest.getReadIterator();
         assertFalse(it.hasNext());
         assertThrows(NoSuchElementException.class, () -> it.next());
     }
@@ -39,22 +55,20 @@ public class RecordWriterTest {
     @Test
     void basicTypes() throws IOException {
         var rec = new PrimitivesAndObjects("foo", 1, 2, 3L, 4L, 5.0F, 6.0F, 7.0, 8.0, true, true);
-        var writer = new AvroRecordWriter<>(PrimitivesAndObjects.class);
-        writer.write("/tmp/primitivesAndObjectsWrite.avro", List.of(rec));
+        var writerTest = new AvroWriterTest<>("/tmp/primitivesAndObjectsWrite.avro", PrimitivesAndObjects.class);
+        writerTest.write(rec);
 
-        var reader = new AvroRecordReader<>("/tmp/primitivesAndObjectsWrite.avro", PrimitivesAndObjects.class);
-        PrimitivesAndObjects value = reader.iterator().next();
+        PrimitivesAndObjects value = writerTest.getReadIterator().next();
         assertEquals(rec, value);
     }
 
     @Test
     void basicTypesNulls() throws IOException {
         var rec = new PrimitivesAndObjects(null, 2, null, 4L, null, 6.0F, null, 8.0, null, true, null);
-        var writer = new AvroRecordWriter<>(PrimitivesAndObjects.class);
-        writer.write("/tmp/primitivesAndNullObjectsWrite.avro", List.of(rec));
+        var writerTest = new AvroWriterTest<>("/tmp/primitivesAndNullObjectsWrite.avro", PrimitivesAndObjects.class);
+        writerTest.write(rec);
 
-        var reader = new AvroRecordReader<>("/tmp/primitivesAndNullObjectsWrite.avro", PrimitivesAndObjects.class);
-        PrimitivesAndObjects value = reader.iterator().next();
+        PrimitivesAndObjects value = writerTest.getReadIterator().next();
         assertEquals(rec, value);
     }
 
@@ -68,22 +82,20 @@ public class RecordWriterTest {
         @Test
         void withEnums() throws IOException {
             var rec = new WithEnum("Apple", OrgType.FOO);
-            var writer = new AvroRecordWriter<>(WithEnum.class);
-            writer.write("/tmp/withEnum.avro", List.of(rec));
+            var writerTest = new AvroWriterTest<>("/tmp/withEnum.avro", WithEnum.class);
+            writerTest.write(rec);
 
-            var reader = new AvroRecordReader<>("/tmp/withEnum.avro", WithEnum.class);
-            WithEnum value = reader.iterator().next();
+            WithEnum value = writerTest.getReadIterator().next();
             assertEquals(rec, value);
         }
 
         @Test
         void withNullEnums() throws IOException {
             var rec = new WithEnum("Apple", null);
-            var writer = new AvroRecordWriter<>(WithEnum.class);
-            writer.write("/tmp/withNullEnums.avro", List.of(rec));
+            var writerTest = new AvroWriterTest<>("/tmp/withNullEnums.avro", WithEnum.class);
+            writerTest.write(rec);
 
-            var reader = new AvroRecordReader<>("/tmp/withNullEnums.avro", WithEnum.class);
-            WithEnum value = reader.iterator().next();
+            WithEnum value = writerTest.getReadIterator().next();
             assertEquals(rec, value);
         }
 
@@ -103,11 +115,10 @@ public class RecordWriterTest {
             CompositeChild child = new CompositeChild("Amount", 100);
             CompositeMain rec = new CompositeMain("Amazon", child);
 
-            var writer = new AvroRecordWriter<>(CompositeMain.class);
-            writer.write("/tmp/compositeMain.avro", List.of(rec));
+            var writerTest = new AvroWriterTest<>("/tmp/compositeMain.avro", CompositeMain.class);
+            writerTest.write(rec);
 
-            var reader = new AvroRecordReader<>("/tmp/compositeMain.avro", CompositeMain.class);
-            CompositeMain value = reader.iterator().next();
+            CompositeMain value = writerTest.getReadIterator().next();
             assertEquals(rec, value);
         }
 
@@ -115,11 +126,10 @@ public class RecordWriterTest {
         void compositeValueWithNull() throws IOException {
             CompositeMain rec = new CompositeMain("Amazon", null);
 
-            var writer = new AvroRecordWriter<>(CompositeMain.class);
-            writer.write("/tmp/compositeMainWithNull.avro", List.of(rec));
+            var writerTest = new AvroWriterTest<>("/tmp/compositeMainWithNull.avro", CompositeMain.class);
+            writerTest.write(rec);
 
-            var reader = new AvroRecordReader<>("/tmp/compositeMainWithNull.avro", CompositeMain.class);
-            CompositeMain value = reader.iterator().next();
+            CompositeMain value = writerTest.getReadIterator().next();
             assertEquals(rec, value);
         }
 
@@ -162,11 +172,10 @@ public class RecordWriterTest {
             CompositeChild child2 = new CompositeChild("Size", 20);
             CompositeMain rec = new CompositeMain("Amazon", List.of(child1, child2));
 
-            var writer = new AvroRecordWriter<>(CompositeMain.class);
-            writer.write("/tmp/withCollectionObject.avro", List.of(rec));
+            var writerTest = new AvroWriterTest<>("/tmp/withCollectionObject.avro", CompositeMain.class);
+            writerTest.write(rec);
 
-            var reader = new AvroRecordReader<>("/tmp/withCollectionObject.avro", CompositeMain.class);
-            CompositeMain value = reader.iterator().next();
+            CompositeMain value = writerTest.getReadIterator().next();
             assertEquals(rec, value);
         }
 
@@ -174,11 +183,10 @@ public class RecordWriterTest {
         void emptyCollectionObject() throws IOException {
             CompositeMain rec = new CompositeMain("Amazon", null);
 
-            var writer = new AvroRecordWriter<>(CompositeMain.class);
-            writer.write("/tmp/emptyCollectionObject.avro", List.of(rec));
+            var writerTest = new AvroWriterTest<>("/tmp/emptyCollectionObject.avro", CompositeMain.class);
+            writerTest.write(rec);
 
-            var reader = new AvroRecordReader<>("/tmp/emptyCollectionObject.avro", CompositeMain.class);
-            CompositeMain value = reader.iterator().next();
+            CompositeMain value = writerTest.getReadIterator().next();
             assertEquals(rec, value);
         }
 
@@ -189,11 +197,10 @@ public class RecordWriterTest {
         void withCollectionSimples() throws IOException {
             SimpleCollection rec = new SimpleCollection("Amazon", List.of(10, 20), List.of("FOO", "BAR"));
 
-            var writer = new AvroRecordWriter<>(SimpleCollection.class);
-            writer.write("/tmp/withCollectionSimples.avro", List.of(rec));
+            var writerTest = new AvroWriterTest<>("/tmp/withCollectionSimples.avro", SimpleCollection.class);
+            writerTest.write(rec);
 
-            var reader = new AvroRecordReader<>("/tmp/withCollectionSimples.avro", SimpleCollection.class);
-            SimpleCollection value = reader.iterator().next();
+            SimpleCollection value = writerTest.getReadIterator().next();
             assertEquals(rec, value);
         }
 
@@ -204,12 +211,33 @@ public class RecordWriterTest {
         void withEnumCollection() throws IOException {
             EnumCollection rec = new EnumCollection("Amazon", List.of(OrgType.FOO, OrgType.BAR));
 
-            var writer = new AvroRecordWriter<>(EnumCollection.class);
-            writer.write("/tmp/withEnumCollection.avro", List.of(rec));
+            var writerTest = new AvroWriterTest<>("/tmp/withEnumCollection.avro", EnumCollection.class);
+            writerTest.write(rec);
 
-            var reader = new AvroRecordReader<>("/tmp/withEnumCollection.avro", EnumCollection.class);
-            EnumCollection value = reader.iterator().next();
+            EnumCollection value = writerTest.getReadIterator().next();
             assertEquals(rec, value);
+        }
+    }
+
+    private class AvroWriterTest<T> {
+
+        private final String path;
+        private final Class<T> type;
+
+        AvroWriterTest(String path, Class<T> type) {
+            this.path = path;
+            this.type = type;
+            new File(path).delete();
+        }
+
+        public void write(T... values) throws IOException {
+            AvroRecordWriter<T> writer = new AvroRecordWriter<>(type);
+            writer.write(path, List.of(values));
+        }
+
+        public Iterator<T> getReadIterator() throws IOException {
+            var reader = new AvroRecordReader<>(path, type);
+            return reader.iterator();
         }
     }
 }

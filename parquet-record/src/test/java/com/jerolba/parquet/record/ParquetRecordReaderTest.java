@@ -1,9 +1,26 @@
+/**
+ * Copyright 2022 Jerónimo López Bezanilla
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.jerolba.parquet.record;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -11,18 +28,15 @@ import java.util.List;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.hadoop.ParquetFileWriter.Mode;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
-import org.apache.parquet.hadoop.util.HadoopOutputFile;
 import org.apache.parquet.io.OutputFile;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-class RecordReaderTest {
+class ParquetRecordReaderTest {
 
     public record PrimitivesAndObjects(String name,
             int intPrimitive, Integer intObject,
@@ -51,7 +65,8 @@ class RecordReaderTest {
                 .name("booleanObject").type().nullable().booleanType().noDefault()
                 .endRecord();
 
-        try (ParquetWriter<GenericData.Record> writer = writer("/tmp/privitiveObjects.parquet", schema)) {
+        var parquetTest = new ParquetReaderTest("/tmp/privitiveObjects.parquet");
+        parquetTest.write(schema, writer -> {
             GenericData.Record record = new GenericData.Record(schema);
             record.put("name", "foo");
             record.put("intPrimitive", 1);
@@ -74,12 +89,12 @@ class RecordReaderTest {
             record.put("doublePrimitive", 70.0);
             record.put("booleanPrimitive", true);
             writer.write(record);
-        }
+        });
 
-        ParquetRecordReader<PrimitivesAndObjects> loader = new ParquetRecordReader<>("/tmp/privitiveObjects.parquet", PrimitivesAndObjects.class);
-        Iterator<PrimitivesAndObjects> it = loader.iterator();
+        Iterator<PrimitivesAndObjects> it = parquetTest.iterator(PrimitivesAndObjects.class);
         assertEquals(new PrimitivesAndObjects("foo", 1, 2, 3L, 4L, 5.0F, 6.0F, 7.0, 8.0, true, true), it.next());
-        assertEquals(new PrimitivesAndObjects("bar", 10, null, 30L, null, 50.0F, null, 70.0, null, true, null), it.next());
+        assertEquals(new PrimitivesAndObjects("bar", 10, null, 30L, null, 50.0F, null, 70.0, null, true, null),
+                it.next());
         assertFalse(it.hasNext());
     }
 
@@ -93,7 +108,7 @@ class RecordReaderTest {
         public record WithEnum(String name, OrgType orgType) {
         }
 
-        private Schema schema = SchemaBuilder.builder()
+        private final Schema schema = SchemaBuilder.builder()
                 .record("WithEnum")
                 .namespace("com.jerolba.parquet")
                 .fields()
@@ -103,7 +118,8 @@ class RecordReaderTest {
 
         @Test
         void withEnums() throws IOException {
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/withEnum.parquet", schema)) {
+            var parquetTest = new ParquetReaderTest("/tmp/withEnum.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("orgType", OrgType.FOO.name());
@@ -113,10 +129,9 @@ class RecordReaderTest {
                 record.put("name", "Spotify");
                 record.put("orgType", null);
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<WithEnum> loader = new ParquetRecordReader<>("/tmp/withEnum.parquet", WithEnum.class);
-            Iterator<WithEnum> it = loader.iterator();
+            Iterator<WithEnum> it = parquetTest.iterator(WithEnum.class);
             assertEquals(new WithEnum("Apple", OrgType.FOO), it.next());
             assertEquals(new WithEnum("Spotify", null), it.next());
             assertFalse(it.hasNext());
@@ -124,15 +139,15 @@ class RecordReaderTest {
 
         @Test
         void unconvertibleEnums() throws IOException {
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/withEnum.parquet", schema)) {
+            var parquetTest = new ParquetReaderTest("/tmp/withEnum.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("orgType", "invalid");
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<WithEnum> loader = new ParquetRecordReader<>("/tmp/withEnum.parquet", WithEnum.class);
-            Iterator<WithEnum> it = loader.iterator();
+            Iterator<WithEnum> it = parquetTest.iterator(WithEnum.class);
             assertThrows(IllegalArgumentException.class, () -> it.next());
         }
     }
@@ -167,8 +182,8 @@ class RecordReaderTest {
                     .name("child").type().unionOf().nullType().and().type(childSchema).endUnion().noDefault()
                     .endRecord();
 
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/compositeValue.parquet", schema)) {
-
+            var parquetTest = new ParquetReaderTest("/tmp/compositeValue.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record child = new GenericData.Record(childSchema);
                 child.put("id", "12345");
                 child.put("value", 12345);
@@ -181,10 +196,9 @@ class RecordReaderTest {
                 record = new GenericData.Record(schema);
                 record.put("name", "Spotify");
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<CompositeMain> loader = new ParquetRecordReader<>("/tmp/compositeValue.parquet", CompositeMain.class);
-            Iterator<CompositeMain> it = loader.iterator();
+            Iterator<CompositeMain> it = parquetTest.iterator(CompositeMain.class);
             assertEquals(new CompositeMain("Apple", new CompositeChild("12345", 12345)), it.next());
             assertEquals(new CompositeMain("Spotify", null), it.next());
         }
@@ -199,7 +213,8 @@ class RecordReaderTest {
                     .name("child").type(childSchema).noDefault()
                     .endRecord();
 
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/compositeValue.parquet", schema)) {
+            var parquetTest = new ParquetReaderTest("/tmp/compositeValue.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record child = new GenericData.Record(childSchema);
                 child.put("id", "12345");
                 child.put("value", 12345);
@@ -208,10 +223,9 @@ class RecordReaderTest {
                 record.put("name", "Apple");
                 record.put("child", child);
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<CompositeMain> loader = new ParquetRecordReader<>("/tmp/compositeValue.parquet", CompositeMain.class);
-            Iterator<CompositeMain> it = loader.iterator();
+            Iterator<CompositeMain> it = parquetTest.iterator(CompositeMain.class);
             assertEquals(new CompositeMain("Apple", new CompositeChild("12345", 12345)), it.next());
         }
 
@@ -225,7 +239,8 @@ class RecordReaderTest {
                     .name("child").type(childSchema).noDefault()
                     .endRecord();
 
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/compositeValue.parquet", schema)) {
+            var parquetTest = new ParquetReaderTest("/tmp/compositeValue.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record child = new GenericData.Record(childSchema);
                 child.put("id", "12345");
                 child.put("value", 12345);
@@ -234,10 +249,9 @@ class RecordReaderTest {
                 record.put("name", "Apple");
                 record.put("child", child);
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<CompositeGeneric> loader = new ParquetRecordReader<>("/tmp/compositeValue.parquet", CompositeGeneric.class);
-            assertThrows(IllegalArgumentException.class, () -> loader.iterator());
+            assertThrows(IllegalArgumentException.class, () -> parquetTest.iterator(CompositeGeneric.class));
         }
 
     }
@@ -270,8 +284,8 @@ class RecordReaderTest {
                     .name("children").type(childrenSchema).noDefault()
                     .endRecord();
 
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/compositeListValue.parquet", schema)) {
-
+            var parquetTest = new ParquetReaderTest("/tmp/compositeListValue.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record child1 = new GenericData.Record(childSchema);
                 child1.put("id", "12345");
                 child1.put("value", 12345);
@@ -280,22 +294,20 @@ class RecordReaderTest {
                 child2.put("id", "23456");
                 child2.put("value", 23456);
 
-                var children = new GenericData.Array<GenericData.Record>(childrenSchema, List.of(child1, child2));
+                var children = new GenericData.Array<>(childrenSchema, List.of(child1, child2));
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", children);
                 writer.write(record);
 
-                children = new GenericData.Array<GenericData.Record>(childrenSchema, List.of());
+                children = new GenericData.Array<>(childrenSchema, List.of());
                 record = new GenericData.Record(schema);
                 record.put("name", "Spotify");
                 record.put("children", children);
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<CompositeMain> loader = new ParquetRecordReader<>("/tmp/compositeListValue.parquet", CompositeMain.class);
-            Iterator<CompositeMain> it = loader.iterator();
-
+            Iterator<CompositeMain> it = parquetTest.iterator(CompositeMain.class);
             var expected = new CompositeMain("Apple",
                     List.of(new CompositeChild("12345", 12345), new CompositeChild("23456", 23456)));
             assertEquals(expected, it.next());
@@ -312,8 +324,8 @@ class RecordReaderTest {
                     .name("children").type().unionOf().nullType().and().type(childrenSchema).endUnion().noDefault()
                     .endRecord();
 
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/compositeListValue.parquet", schema)) {
-
+            var parquetTest = new ParquetReaderTest("/tmp/compositeListValue.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record child1 = new GenericData.Record(childSchema);
                 child1.put("id", "12345");
                 child1.put("value", 12345);
@@ -322,21 +334,19 @@ class RecordReaderTest {
                 child2.put("id", "23456");
                 child2.put("value", 23456);
 
-                var children = new GenericData.Array<GenericData.Record>(childrenSchema, List.of(child1, child2));
+                var children = new GenericData.Array<>(childrenSchema, List.of(child1, child2));
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", children);
                 writer.write(record);
 
-                children = new GenericData.Array<GenericData.Record>(childrenSchema, List.of());
+                children = new GenericData.Array<>(childrenSchema, List.of());
                 record = new GenericData.Record(schema);
                 record.put("name", "Spotify");
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<CompositeMain> loader = new ParquetRecordReader<>("/tmp/compositeListValue.parquet", CompositeMain.class);
-            Iterator<CompositeMain> it = loader.iterator();
-
+            Iterator<CompositeMain> it = parquetTest.iterator(CompositeMain.class);
             var expected = new CompositeMain("Apple",
                     List.of(new CompositeChild("12345", 12345), new CompositeChild("23456", 23456)));
             assertEquals(expected, it.next());
@@ -364,8 +374,8 @@ class RecordReaderTest {
         void integerList() throws IOException {
             var schema = ofType(SchemaBuilder.builder().array().items().intType());
 
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/withIntegerList.parquet", schema)) {
-
+            var parquetTest = new ParquetReaderTest("/tmp/withIntegerList.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", List.of(1234, 5678));
@@ -375,10 +385,9 @@ class RecordReaderTest {
                 record.put("name", "Spotify");
                 record.put("children", List.of());
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<WithIntegerList> loader = new ParquetRecordReader<>("/tmp/withIntegerList.parquet", WithIntegerList.class);
-            Iterator<WithIntegerList> it = loader.iterator();
+            Iterator<WithIntegerList> it = parquetTest.iterator(WithIntegerList.class);
 
             var expected = new WithIntegerList("Apple", List.of(1234, 5678));
             assertEquals(expected, it.next());
@@ -392,8 +401,8 @@ class RecordReaderTest {
         void stringList() throws IOException {
             var schema = ofType(SchemaBuilder.builder().array().items().stringType());
 
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/withStringList.parquet", schema)) {
-
+            var parquetTest = new ParquetReaderTest("/tmp/withStringList.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", List.of("foo", "bar"));
@@ -403,10 +412,9 @@ class RecordReaderTest {
                 record.put("name", "Spotify");
                 record.put("children", List.of());
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<WithStringList> loader = new ParquetRecordReader<>("/tmp/withStringList.parquet", WithStringList.class);
-            Iterator<WithStringList> it = loader.iterator();
+            Iterator<WithStringList> it = parquetTest.iterator(WithStringList.class);
 
             var expected = new WithStringList("Apple", List.of("foo", "bar"));
             assertEquals(expected, it.next());
@@ -424,8 +432,8 @@ class RecordReaderTest {
         void enumList() throws IOException {
             var schema = ofType(SchemaBuilder.builder().array().items().stringType());
 
-            try (ParquetWriter<GenericData.Record> writer = writer("/tmp/withEnumList.parquet", schema)) {
-
+            var parquetTest = new ParquetReaderTest("/tmp/withEnumList.parquet");
+            parquetTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", List.of("FOO"));
@@ -435,10 +443,9 @@ class RecordReaderTest {
                 record.put("name", "Spotify");
                 record.put("children", List.of("FOO", "BAR", "BAZ"));
                 writer.write(record);
-            }
+            });
 
-            ParquetRecordReader<WithEnumList> loader = new ParquetRecordReader<>("/tmp/withEnumList.parquet", WithEnumList.class);
-            Iterator<WithEnumList> it = loader.iterator();
+            Iterator<WithEnumList> it = parquetTest.iterator(WithEnumList.class);
 
             var expected = new WithEnumList("Apple", List.of(OrgType.FOO));
             assertEquals(expected, it.next());
@@ -460,29 +467,58 @@ class RecordReaderTest {
                 .name("value").type().stringType().noDefault()
                 .endRecord();
 
-        try (ParquetWriter<GenericData.Record> writer = writer("/tmp/withGenericField.parquet", schema)) {
+        var parquetTest = new ParquetReaderTest("/tmp/withGenericField.parquet");
+
+        parquetTest.write(schema, writer -> {
             GenericData.Record record = new GenericData.Record(schema);
             record.put("name", "foo");
             record.put("value", "bar");
             writer.write(record);
-        }
-
-        ParquetRecordReader<WithGenericField> loader = new ParquetRecordReader<>("/tmp/withGenericField.parquet", WithGenericField.class);
-        assertThrows(RuntimeException.class, () -> loader.iterator());
+        });
+        assertThrows(RuntimeException.class, () -> parquetTest.iterator(WithGenericField.class));
     }
 
     private ParquetWriter<GenericData.Record> writer(String filePath, Schema schema) throws IOException {
-        Path path = new Path(filePath);
-        OutputFile outputFile = HadoopOutputFile.fromPath(path, new Configuration());
+        OutputFile outputFile = new OutputStreamOutputFile(new FileOutputStream(filePath));
+        new FileSystemInputFile(new File(filePath));
         return AvroParquetWriter.<GenericData.Record>builder(outputFile)
                 .withSchema(schema)
                 .withCompressionCodec(CompressionCodecName.SNAPPY)
                 .withRowGroupSize((long) ParquetWriter.DEFAULT_BLOCK_SIZE)
                 .withPageSize(ParquetWriter.DEFAULT_PAGE_SIZE)
-                .withConf(new Configuration())
                 .withValidation(true)
                 .withDictionaryEncoding(true)
                 .withWriteMode(Mode.OVERWRITE)
                 .build();
+    }
+
+    private class ParquetReaderTest {
+
+        private final String path;
+
+        ParquetReaderTest(String path) {
+            this.path = path;
+        }
+
+        public ParquetReaderTest write(Schema schema, WriterConsumer writerConsumer) throws IOException {
+            try (ParquetWriter<GenericData.Record> writer = writer(path, schema)) {
+                writerConsumer.accept(writer);
+            }
+            return this;
+        }
+
+        public <T> ParquetRecordReader<T> reader(Class<T> clazz) throws IOException {
+            return new ParquetRecordReader<>(path, clazz);
+        }
+
+        public <T> Iterator<T> iterator(Class<T> clazz) throws IOException {
+            return reader(clazz).iterator();
+        }
+
+    }
+
+    @FunctionalInterface
+    public interface WriterConsumer {
+        void accept(ParquetWriter<GenericData.Record> writerConsumer) throws IOException;
     }
 }

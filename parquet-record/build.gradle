@@ -1,6 +1,9 @@
 plugins {
     id 'java'
+    id 'jacoco'
+	id 'checkstyle'
     id 'maven-publish'
+    id 'signing'
 }
 
 java {
@@ -15,26 +18,41 @@ repositories {
 
 dependencies {
 	implementation project(':avro-record')
-	implementation 'org.apache.parquet:parquet-hadoop:1.12.2'
-	implementation 'org.apache.parquet:parquet-avro:1.12.2'
-	implementation 'org.apache.hadoop:hadoop-client:3.3.2'
+	implementation 'org.apache.parquet:parquet-hadoop:1.12.3'
+	implementation 'org.apache.parquet:parquet-avro:1.12.3'
+	compileOnly 'org.apache.hadoop:hadoop-client:3.3.2'
 	
+	testImplementation 'org.apache.commons:commons-lang3:3.12.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testRuntimeOnly 'org.apache.hadoop:hadoop-common:3.3.2'
+    testRuntimeOnly 'org.apache.hadoop:hadoop-mapreduce-client-core:3.3.2'
+    testCompileOnly 'org.apache.hadoop:hadoop-client:3.3.2'
 }
+
 
 test {
     useJUnitPlatform()
 }
 
 task sourceJar(type: Jar) {
-    from sourceSets.main.allJava
     classifier "sources"
+    from sourceSets.main.allJava
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
+    classifier "javadoc"
     from javadoc.destinationDir
+}
+
+artifacts {
+    archives jar
+    archives sourceJar
+    archives javadocJar
+}
+
+signing {
+    sign configurations.archives
 }
 
 publishing {
@@ -43,14 +61,15 @@ publishing {
             from components.java
             artifact sourceJar
             artifact javadocJar
-            artifactId 'jfleet'
-            version version
+            groupId 'com.jerolba'
+            artifactId 'parquet-record'
+            version '0.0.1'
             pom.withXml {
                 asNode().children().last() + {
                     resolveStrategy = Closure.DELEGATE_FIRST
-                    name 'JFleet'
-                    description 'JFleet loads data mapped as JPA into DB with alternate and fast way from JPA'
-                    url 'https://github.com/jerolba/jfleet'
+                    name 'Parquet Record'
+                    description 'Parquet Record serialize/deserialize Parquet files using Java Records'
+                    url 'https://github.com/jerolba/parquet-java-record'
                     licenses {
                         license {
                             name 'The Apache Software License, Version 2.0'
@@ -61,18 +80,61 @@ publishing {
                     developers {
                         developer {
                             id 'jerolba'
-                            name 'Jerónimo López'
-                            email 'jerolba+parquetrecord@gmail.com'
+                            name 'JerÃ³nimo LÃ³pez'
                         }
                     }
                     scm {
-                        connection 'scm:git:git://github.com/jerolba/jfleet.git'
-                        developerConnection 'scm:git:ssh://github.com:jerolba/jfleet.git'
-                        url 'https://github.com/jerolba/jfleet'
-
+                        connection 'scm:git:git://github.com/jerolba/parquet-java-record'
+                        developerConnection 'scm:git:ssh://github.com:jerolba/parquet-java-record'
+                        url 'https://github.com/jerolba/parquet-java-record'
                     }
                 }
+                def pomFile = file("${project.buildDir}/generated-pom.xml")
+			    writeTo(pomFile)
+			    def pomAscFile = signing.sign(pomFile).signatureFiles[0]
+			    artifact(pomAscFile) {
+			        classifier = null
+			        extension = 'pom.asc'
+			    }
             }
+            
+			project.tasks.signArchives.signatureFiles.each {
+			    artifact(it) {
+			        def matcher = it.file =~ /-(sources|javadoc)\.jar\.asc$/
+			        if (matcher.find()) {
+			            classifier = matcher.group(1)
+			        } else {
+			            classifier = null
+			        }
+			        extension = 'jar.asc'
+			    }
+			}		
         }
+    }
+    if (project.hasProperty('sonatypeUsername')){
+	    repositories {
+	        maven {
+	            url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+	            //url 'https://oss.sonatype.org/content/repositories/snapshots/'
+	            credentials {
+	                username sonatypeUsername
+	                password sonatypePassword
+	            }
+	        }
+	    }    
+    } else {
+		println 'No sonatype configuration found. Expected user and password at $HOME/.gradle/gradle.properties file.'    	
+    }    
+}
+
+model {
+    tasks.generatePomFileForMavenJavaPublication {
+        destination = file("$buildDir/generated-pom.xml")
+    }
+    tasks.publishMavenJavaPublicationToMavenLocal {
+        dependsOn project.tasks.signArchives
+    }
+    tasks.publishMavenJavaPublicationToMavenRepository {
+        dependsOn project.tasks.signArchives
     }
 }

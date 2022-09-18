@@ -1,3 +1,18 @@
+/**
+ * Copyright 2022 Jerónimo López Bezanilla
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.jerolba.avro.record;
 
 import java.io.Closeable;
@@ -27,9 +42,9 @@ public class AvroRecordReader<T> {
     }
 
     public Iterator<T> iterator() throws IOException {
-        DatumReader<GenericRecord> datumReader = new GenericDatumReader<GenericRecord>();
-        DataFileReader<GenericRecord> dataFileReader = new DataFileReader<GenericRecord>(new File(path), datumReader);
-        return new RecordIterator<T>(recordClass, dataFileReader);
+        DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+        DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(new File(path), datumReader);
+        return new RecordIterator<>(recordClass, dataFileReader);
     }
 
     public Stream<T> stream() throws IOException {
@@ -41,7 +56,7 @@ public class AvroRecordReader<T> {
         private final DataFileReader<GenericRecord> reader;
         private final AvroRecord2JavaRecord<T> mapper;
 
-        public RecordIterator(Class<T> recordClass, DataFileReader<GenericRecord> reader) throws IOException {
+        RecordIterator(Class<T> recordClass, DataFileReader<GenericRecord> reader) throws IOException {
             this.reader = reader;
             Schema schema = reader.getSchema();
             mapper = new AvroRecord2JavaRecord<>(recordClass, schema);

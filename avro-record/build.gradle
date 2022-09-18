@@ -1,5 +1,9 @@
 plugins {
     id 'java'
+    id 'jacoco'
+	id 'checkstyle'
+    id 'maven-publish'
+    id 'signing'
 }
 
 java {
@@ -21,4 +25,108 @@ dependencies {
 
 test {
     useJUnitPlatform()
+}
+
+task sourceJar(type: Jar) {
+    classifier "sources"
+    from sourceSets.main.allJava
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier "javadoc"
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives jar
+    archives sourceJar
+    archives javadocJar
+}
+
+signing {
+    sign configurations.archives
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact sourceJar
+            artifact javadocJar
+            groupId 'com.jerolba'
+            artifactId 'avro-record'
+            version '0.0.1'
+            pom.withXml {
+                asNode().children().last() + {
+                    resolveStrategy = Closure.DELEGATE_FIRST
+                    name 'Avro Record'
+                    description 'Avro Record serialize/deserialize Avro files using Java Records'
+                    url 'https://github.com/jerolba/parquet-java-record'
+                    licenses {
+                        license {
+                            name 'The Apache Software License, Version 2.0'
+                            url 'http://www.apache.org/license/LICENSE-2.0.txt'
+                            distribution 'repo'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id 'jerolba'
+                            name 'Jerónimo López'
+                        }
+                    }
+                    scm {
+                        connection 'scm:git:git://github.com/jerolba/parquet-java-record'
+                        developerConnection 'scm:git:ssh://github.com:jerolba/parquet-java-record'
+                        url 'https://github.com/jerolba/parquet-java-record'
+                    }
+                }
+                def pomFile = file("${project.buildDir}/generated-pom.xml")
+			    writeTo(pomFile)
+			    def pomAscFile = signing.sign(pomFile).signatureFiles[0]
+			    artifact(pomAscFile) {
+			        classifier = null
+			        extension = 'pom.asc'
+			    }
+            }
+            
+			project.tasks.signArchives.signatureFiles.each {
+			    artifact(it) {
+			        def matcher = it.file =~ /-(sources|javadoc)\.jar\.asc$/
+			        if (matcher.find()) {
+			            classifier = matcher.group(1)
+			        } else {
+			            classifier = null
+			        }
+			        extension = 'jar.asc'
+			    }
+			}		
+        }
+    }
+    if (project.hasProperty('sonatypeUsername')){
+	    repositories {
+	        maven {
+	            url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+	            //url 'https://oss.sonatype.org/content/repositories/snapshots/'
+	            credentials {
+	                username sonatypeUsername
+	                password sonatypePassword
+	            }
+	        }
+	    }    
+    } else {
+		println 'No sonatype configuration found. Expected user and password at $HOME/.gradle/gradle.properties file.'    	
+    }    
+}
+
+model {
+    tasks.generatePomFileForMavenJavaPublication {
+        destination = file("$buildDir/generated-pom.xml")
+    }
+    tasks.publishMavenJavaPublicationToMavenLocal {
+        dependsOn project.tasks.signArchives
+    }
+    tasks.publishMavenJavaPublicationToMavenRepository {
+        dependsOn project.tasks.signArchives
+    }
 }

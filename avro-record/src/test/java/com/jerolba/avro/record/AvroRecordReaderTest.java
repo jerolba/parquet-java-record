@@ -1,3 +1,18 @@
+/**
+ * Copyright 2022 Jerónimo López Bezanilla
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.jerolba.avro.record;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,7 +34,7 @@ import org.apache.avro.io.DatumWriter;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-class RecordReaderTest {
+class AvroRecordReaderTest {
 
     public record PrimitivesAndObjects(String name,
             int intPrimitive, Integer intObject,
@@ -48,7 +63,8 @@ class RecordReaderTest {
                 .name("booleanObject").type().nullable().booleanType().noDefault()
                 .endRecord();
 
-        try (DataFileWriter<GenericRecord> writer = writer("/tmp/privitiveObjects.avro", schema)) {
+        var avroTest = new AvroTest("/tmp/privitiveObjects.avro");
+        avroTest.write(schema, writer -> {
             GenericData.Record record = new GenericData.Record(schema);
             record.put("name", "foo");
             record.put("intPrimitive", 1);
@@ -71,12 +87,15 @@ class RecordReaderTest {
             record.put("doublePrimitive", 70.0);
             record.put("booleanPrimitive", true);
             writer.append(record);
-        }
+        });
 
-        AvroRecordReader<PrimitivesAndObjects> loader = new AvroRecordReader<>("/tmp/privitiveObjects.avro", PrimitivesAndObjects.class);
-        Iterator<PrimitivesAndObjects> it = loader.iterator();
-        assertEquals(new PrimitivesAndObjects("foo", 1, 2, 3L, 4L, 5.0F, 6.0F, 7.0, 8.0, true, true), it.next());
-        assertEquals(new PrimitivesAndObjects("bar", 10, null, 30L, null, 50.0F, null, 70.0, null, true, null), it.next());
+        var it = avroTest.iterator(PrimitivesAndObjects.class);
+        assertEquals(
+                new PrimitivesAndObjects("foo", 1, 2, 3L, 4L, 5.0F, 6.0F, 7.0, 8.0, true, true),
+                it.next());
+        assertEquals(
+                new PrimitivesAndObjects("bar", 10, null, 30L, null, 50.0F, null, 70.0, null, true, null),
+                it.next());
         assertFalse(it.hasNext());
     }
 
@@ -90,7 +109,7 @@ class RecordReaderTest {
         public record WithEnum(String name, OrgType orgType) {
         }
 
-        private Schema schema = SchemaBuilder.builder()
+        private final Schema schema = SchemaBuilder.builder()
                 .record("WithEnum")
                 .namespace("com.jerolba.avro")
                 .fields()
@@ -100,7 +119,8 @@ class RecordReaderTest {
 
         @Test
         void withEnums() throws IOException {
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/withEnum.avro", schema)) {
+            var avroTest = new AvroTest("/tmp/withEnum.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("orgType", OrgType.FOO.name());
@@ -110,10 +130,9 @@ class RecordReaderTest {
                 record.put("name", "Spotify");
                 record.put("orgType", null);
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<WithEnum> loader = new AvroRecordReader<>("/tmp/withEnum.avro", WithEnum.class);
-            Iterator<WithEnum> it = loader.iterator();
+            Iterator<WithEnum> it = avroTest.iterator(WithEnum.class);
             assertEquals(new WithEnum("Apple", OrgType.FOO), it.next());
             assertEquals(new WithEnum("Spotify", null), it.next());
             assertFalse(it.hasNext());
@@ -121,15 +140,15 @@ class RecordReaderTest {
 
         @Test
         void unconvertibleEnums() throws IOException {
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/withEnum.avro", schema)) {
+            var avroTest = new AvroTest("/tmp/withEnum.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("orgType", "invalid");
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<WithEnum> loader = new AvroRecordReader<>("/tmp/withEnum.avro", WithEnum.class);
-            Iterator<WithEnum> it = loader.iterator();
+            Iterator<WithEnum> it = avroTest.iterator(WithEnum.class);
             assertThrows(IllegalArgumentException.class, () -> it.next());
         }
     }
@@ -164,8 +183,8 @@ class RecordReaderTest {
                     .name("child").type().unionOf().nullType().and().type(childSchema).endUnion().noDefault()
                     .endRecord();
 
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/compositeValue.avro", schema)) {
-
+            var avroTest = new AvroTest("/tmp/compositeValue.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record child = new GenericData.Record(childSchema);
                 child.put("id", "12345");
                 child.put("value", 12345);
@@ -178,10 +197,9 @@ class RecordReaderTest {
                 record = new GenericData.Record(schema);
                 record.put("name", "Spotify");
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<CompositeMain> loader = new AvroRecordReader<>("/tmp/compositeValue.avro", CompositeMain.class);
-            Iterator<CompositeMain> it = loader.iterator();
+            Iterator<CompositeMain> it = avroTest.iterator(CompositeMain.class);
             assertEquals(new CompositeMain("Apple", new CompositeChild("12345", 12345)), it.next());
             assertEquals(new CompositeMain("Spotify", null), it.next());
         }
@@ -196,7 +214,8 @@ class RecordReaderTest {
                     .name("child").type(childSchema).noDefault()
                     .endRecord();
 
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/compositeValue.avro", schema)) {
+            var avroTest = new AvroTest("/tmp/compositeValue.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record child = new GenericData.Record(childSchema);
                 child.put("id", "12345");
                 child.put("value", 12345);
@@ -205,10 +224,9 @@ class RecordReaderTest {
                 record.put("name", "Apple");
                 record.put("child", child);
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<CompositeMain> loader = new AvroRecordReader<>("/tmp/compositeValue.avro", CompositeMain.class);
-            Iterator<CompositeMain> it = loader.iterator();
+            Iterator<CompositeMain> it = avroTest.iterator(CompositeMain.class);
             assertEquals(new CompositeMain("Apple", new CompositeChild("12345", 12345)), it.next());
         }
 
@@ -222,7 +240,8 @@ class RecordReaderTest {
                     .name("child").type(childSchema).noDefault()
                     .endRecord();
 
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/compositeValue.avro", schema)) {
+            var avroTest = new AvroTest("/tmp/compositeValue.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record child = new GenericData.Record(childSchema);
                 child.put("id", "12345");
                 child.put("value", 12345);
@@ -231,10 +250,9 @@ class RecordReaderTest {
                 record.put("name", "Apple");
                 record.put("child", child);
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<CompositeGeneric> loader = new AvroRecordReader<>("/tmp/compositeValue.avro", CompositeGeneric.class);
-            assertThrows(IllegalArgumentException.class, () -> loader.iterator());
+            assertThrows(IllegalArgumentException.class, () -> avroTest.iterator(CompositeGeneric.class));
         }
 
     }
@@ -267,8 +285,8 @@ class RecordReaderTest {
                     .name("children").type(childrenSchema).noDefault()
                     .endRecord();
 
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/compositeListValue.avro", schema)) {
-
+            var avroTest = new AvroTest("/tmp/compositeListValue.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record child1 = new GenericData.Record(childSchema);
                 child1.put("id", "12345");
                 child1.put("value", 12345);
@@ -277,21 +295,20 @@ class RecordReaderTest {
                 child2.put("id", "23456");
                 child2.put("value", 23456);
 
-                var children = new GenericData.Array<GenericData.Record>(childrenSchema, List.of(child1, child2));
+                var children = new GenericData.Array<>(childrenSchema, List.of(child1, child2));
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", children);
                 writer.append(record);
 
-                children = new GenericData.Array<GenericData.Record>(childrenSchema, List.of());
+                children = new GenericData.Array<>(childrenSchema, List.of());
                 record = new GenericData.Record(schema);
                 record.put("name", "Spotify");
                 record.put("children", children);
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<CompositeMain> loader = new AvroRecordReader<>("/tmp/compositeListValue.avro", CompositeMain.class);
-            Iterator<CompositeMain> it = loader.iterator();
+            Iterator<CompositeMain> it = avroTest.iterator(CompositeMain.class);
 
             var expected = new CompositeMain("Apple",
                     List.of(new CompositeChild("12345", 12345), new CompositeChild("23456", 23456)));
@@ -309,8 +326,8 @@ class RecordReaderTest {
                     .name("children").type().unionOf().nullType().and().type(childrenSchema).endUnion().noDefault()
                     .endRecord();
 
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/compositeListValue.avro", schema)) {
-
+            var avroTest = new AvroTest("/tmp/compositeListValue.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record child1 = new GenericData.Record(childSchema);
                 child1.put("id", "12345");
                 child1.put("value", 12345);
@@ -319,20 +336,19 @@ class RecordReaderTest {
                 child2.put("id", "23456");
                 child2.put("value", 23456);
 
-                var children = new GenericData.Array<GenericData.Record>(childrenSchema, List.of(child1, child2));
+                var children = new GenericData.Array<>(childrenSchema, List.of(child1, child2));
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", children);
                 writer.append(record);
 
-                children = new GenericData.Array<GenericData.Record>(childrenSchema, List.of());
+                children = new GenericData.Array<>(childrenSchema, List.of());
                 record = new GenericData.Record(schema);
                 record.put("name", "Spotify");
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<CompositeMain> loader = new AvroRecordReader<>("/tmp/compositeListValue.avro", CompositeMain.class);
-            Iterator<CompositeMain> it = loader.iterator();
+            Iterator<CompositeMain> it = avroTest.iterator(CompositeMain.class);
 
             var expected = new CompositeMain("Apple",
                     List.of(new CompositeChild("12345", 12345), new CompositeChild("23456", 23456)));
@@ -361,8 +377,8 @@ class RecordReaderTest {
         void integerList() throws IOException {
             var schema = ofType(SchemaBuilder.builder().array().items().intType());
 
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/withIntegerList.avro", schema)) {
-
+            var avroTest = new AvroTest("/tmp/withIntegerList.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", List.of(1234, 5678));
@@ -372,10 +388,9 @@ class RecordReaderTest {
                 record.put("name", "Spotify");
                 record.put("children", List.of());
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<WithIntegerList> loader = new AvroRecordReader<>("/tmp/withIntegerList.avro", WithIntegerList.class);
-            Iterator<WithIntegerList> it = loader.iterator();
+            Iterator<WithIntegerList> it = avroTest.iterator(WithIntegerList.class);
 
             var expected = new WithIntegerList("Apple", List.of(1234, 5678));
             assertEquals(expected, it.next());
@@ -389,8 +404,8 @@ class RecordReaderTest {
         void stringList() throws IOException {
             var schema = ofType(SchemaBuilder.builder().array().items().stringType());
 
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/withStringList.avro", schema)) {
-
+            var avroTest = new AvroTest("/tmp/withStringList.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", List.of("foo", "bar"));
@@ -400,10 +415,9 @@ class RecordReaderTest {
                 record.put("name", "Spotify");
                 record.put("children", List.of());
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<WithStringList> loader = new AvroRecordReader<>("/tmp/withStringList.avro", WithStringList.class);
-            Iterator<WithStringList> it = loader.iterator();
+            Iterator<WithStringList> it = avroTest.iterator(WithStringList.class);
 
             var expected = new WithStringList("Apple", List.of("foo", "bar"));
             assertEquals(expected, it.next());
@@ -421,8 +435,8 @@ class RecordReaderTest {
         void enumList() throws IOException {
             var schema = ofType(SchemaBuilder.builder().array().items().stringType());
 
-            try (DataFileWriter<GenericRecord> writer = writer("/tmp/withEnumList.avro", schema)) {
-
+            var avroTest = new AvroTest("/tmp/withEnumList.avro");
+            avroTest.write(schema, writer -> {
                 GenericData.Record record = new GenericData.Record(schema);
                 record.put("name", "Apple");
                 record.put("children", List.of("FOO"));
@@ -432,10 +446,9 @@ class RecordReaderTest {
                 record.put("name", "Spotify");
                 record.put("children", List.of("FOO", "BAR", "BAZ"));
                 writer.append(record);
-            }
+            });
 
-            AvroRecordReader<WithEnumList> loader = new AvroRecordReader<>("/tmp/withEnumList.avro", WithEnumList.class);
-            Iterator<WithEnumList> it = loader.iterator();
+            Iterator<WithEnumList> it = avroTest.iterator(WithEnumList.class);
 
             var expected = new WithEnumList("Apple", List.of(OrgType.FOO));
             assertEquals(expected, it.next());
@@ -457,20 +470,45 @@ class RecordReaderTest {
                 .name("value").type().stringType().noDefault()
                 .endRecord();
 
-        try (DataFileWriter<GenericRecord> writer = writer("/tmp/withGenericField.avro", schema)) {
+        var avroTest = new AvroTest("/tmp/withGenericField.avro");
+        avroTest.write(schema, writer -> {
             GenericData.Record record = new GenericData.Record(schema);
             record.put("name", "foo");
             record.put("value", "bar");
             writer.append(record);
-        }
+        });
 
-        AvroRecordReader<WithGenericField> loader = new AvroRecordReader<>("/tmp/withGenericField.avro", WithGenericField.class);
-        assertThrows(RuntimeException.class, () -> loader.iterator());
+        assertThrows(RuntimeException.class, () -> avroTest.iterator(WithGenericField.class));
     }
 
-    private DataFileWriter<GenericRecord> writer(String filePath, Schema schema) throws IOException {
-        DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<GenericRecord>(schema);
-        DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(datumWriter);
-        return dataFileWriter.create(schema, new File(filePath));
+    private class AvroTest {
+
+        private final String path;
+
+        AvroTest(String path) {
+            this.path = path;
+        }
+
+        public AvroTest write(Schema schema, WriterConsumer writerConsumer) throws IOException {
+            DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+            try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
+                var writer = dataFileWriter.create(schema, new File(path));
+                writerConsumer.accept(writer);
+            }
+            return this;
+        }
+
+        public <T> AvroRecordReader<T> reader(Class<T> clazz) throws IOException {
+            return new AvroRecordReader<>(path, clazz);
+        }
+
+        public <T> Iterator<T> iterator(Class<T> clazz) throws IOException {
+            return reader(clazz).iterator();
+        }
+    }
+
+    @FunctionalInterface
+    public interface WriterConsumer {
+        void accept(DataFileWriter<GenericRecord> writerConsumer) throws IOException;
     }
 }

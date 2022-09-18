@@ -1,3 +1,18 @@
+/**
+ * Copyright 2022 Jerónimo López Bezanilla
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.jerolba.avro.record;
 
 import java.lang.reflect.InvocationTargetException;
@@ -20,7 +35,7 @@ public class JavaRecord2AvroRecord<T> {
 
     private final RecordInfo recordInfo;
 
-    record FieldMap(Function<Object, Object> map, int pos) {
+    record FieldMap(Function<Object, Object> mapper, int pos) {
 
         FieldMap(Field avroField, Function<Object, Object> map) {
             this(map, avroField.pos());
@@ -42,7 +57,7 @@ public class JavaRecord2AvroRecord<T> {
         for (RecordComponent recordComponent : recordClass.getRecordComponents()) {
             // Review adding aliasing
             Field field = schema.getField(recordComponent.getName());
-            mappers.add(new SimpleMapper(field, recordComponent).buildMapperForField());
+            mappers.add(new SimpleMapperBuilder(field, recordComponent).buildMapperForField());
         }
         return new RecordInfo(schema, mappers);
     }
@@ -53,25 +68,26 @@ public class JavaRecord2AvroRecord<T> {
 
     private GenericRecord map(RecordInfo recordInfo, Object obj) {
         GenericData.Record record = new GenericData.Record(recordInfo.schema());
-        for (var fm : recordInfo.mappers()) {
-            Object value = fm.map().apply(obj);
+        for (var fieldMapper : recordInfo.mappers()) {
+            Object value = fieldMapper.mapper().apply(obj);
             if (value != null) {
-                record.put(fm.pos(), value);
+                record.put(fieldMapper.pos(), value);
             }
         }
         return record;
     }
 
     private static final Set<String> SIMPLE_MAPPER = Set.of("int", "java.lang.Integer", "long", "java.lang.Long",
-            "double", "java.lang.Double", "float", "java.lang.Float", "boolean", "java.lang.Boolean", "java.lang.String");
+            "double", "java.lang.Double", "float", "java.lang.Float", "boolean", "java.lang.Boolean",
+            "java.lang.String");
 
-    private class SimpleMapper {
+    private class SimpleMapperBuilder {
 
         private final Field avroField;
         private final RecordComponent recordComponent;
         private final Method accessor;
 
-        public SimpleMapper(Field avroField, RecordComponent recordComponent) {
+        SimpleMapperBuilder(Field avroField, RecordComponent recordComponent) {
             this.avroField = avroField;
             this.recordComponent = recordComponent;
             this.accessor = recordComponent.getAccessor();
@@ -83,7 +99,7 @@ public class JavaRecord2AvroRecord<T> {
                 return getRecordTypeMapper();
             }
             if (recordComponent.getGenericType() instanceof ParameterizedType) {
-                return new CollectionMapper(avroField, recordComponent).getMapper();
+                return new CollectionMapperBuilder(avroField, recordComponent).getMapper();
             }
             if (SIMPLE_MAPPER.contains(attrJavaType.getName())) {
                 return new FieldMap(avroField, record -> safeInvoke(accessor, record));
@@ -115,19 +131,19 @@ public class JavaRecord2AvroRecord<T> {
         }
     }
 
-    private class CollectionMapper {
+    private class CollectionMapperBuilder {
 
         private final Field avroField;
         private final RecordComponent recordComponent;
         private final Method accessor;
 
-        public CollectionMapper(Field avroField, RecordComponent recordComponent) {
+        CollectionMapperBuilder(Field avroField, RecordComponent recordComponent) {
             this.avroField = avroField;
             this.recordComponent = recordComponent;
             this.accessor = recordComponent.getAccessor();
         }
 
-        public FieldMap getMapper() {
+        private FieldMap getMapper() {
             ParameterizedType paramType = (ParameterizedType) recordComponent.getGenericType();
             Class<?> listType = (Class<?>) paramType.getActualTypeArguments()[0];
             if (listType.isRecord()) {
@@ -206,10 +222,10 @@ public class JavaRecord2AvroRecord<T> {
 
     private static class EnumValue implements GenericEnumSymbol<EnumValue> {
 
-        private Enum<?> value;
-        private Schema schema;
+        private final Enum<?> value;
+        private final Schema schema;
 
-        public EnumValue(Enum<?> value, Schema schema) {
+        EnumValue(Enum<?> value, Schema schema) {
             this.value = value;
             this.schema = schema;
         }
