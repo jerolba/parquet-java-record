@@ -51,64 +51,18 @@ artifacts {
     archives javadocJar
 }
 
-signing {
-    sign configurations.archives
-}
-
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            from components.java
-            artifact sourceJar
-            artifact javadocJar
+            customizePom(pom)
             groupId 'com.jerolba'
             artifactId 'parquet-record'
             version '0.0.1'
-            pom.withXml {
-                asNode().children().last() + {
-                    resolveStrategy = Closure.DELEGATE_FIRST
-                    name 'Parquet Record'
-                    description 'Parquet Record serialize/deserialize Parquet files using Java Records'
-                    url 'https://github.com/jerolba/parquet-java-record'
-                    licenses {
-                        license {
-                            name 'The Apache Software License, Version 2.0'
-                            url 'http://www.apache.org/license/LICENSE-2.0.txt'
-                            distribution 'repo'
-                        }
-                    }
-                    developers {
-                        developer {
-                            id 'jerolba'
-                            name 'Jerónimo López'
-                        }
-                    }
-                    scm {
-                        connection 'scm:git:git://github.com/jerolba/parquet-java-record'
-                        developerConnection 'scm:git:ssh://github.com:jerolba/parquet-java-record'
-                        url 'https://github.com/jerolba/parquet-java-record'
-                    }
-                }
-                def pomFile = file("${project.buildDir}/generated-pom.xml")
-			    writeTo(pomFile)
-			    def pomAscFile = signing.sign(pomFile).signatureFiles[0]
-			    artifact(pomAscFile) {
-			        classifier = null
-			        extension = 'pom.asc'
-			    }
-            }
-            
-			project.tasks.signArchives.signatureFiles.each {
-			    artifact(it) {
-			        def matcher = it.file =~ /-(sources|javadoc)\.jar\.asc$/
-			        if (matcher.find()) {
-			            classifier = matcher.group(1)
-			        } else {
-			            classifier = null
-			        }
-			        extension = 'jar.asc'
-			    }
-			}		
+
+            from components.java
+
+            artifact sourceJar
+            artifact javadocJar
         }
     }
     if (project.hasProperty('sonatypeUsername')){
@@ -127,14 +81,42 @@ publishing {
     }    
 }
 
-model {
-    tasks.generatePomFileForMavenJavaPublication {
-        destination = file("$buildDir/generated-pom.xml")
-    }
-    tasks.publishMavenJavaPublicationToMavenLocal {
-        dependsOn project.tasks.signArchives
-    }
-    tasks.publishMavenJavaPublicationToMavenRepository {
-        dependsOn project.tasks.signArchives
+signing {
+    sign publishing.publications.mavenJava
+}
+
+
+def customizePom(pom) {
+    pom.withXml {
+        def root = asNode()
+
+        // add all items necessary for maven central publication
+        root.children().last() + {
+            resolveStrategy = Closure.DELEGATE_FIRST
+
+            description 'Parquet Record serialize/deserialize Parquet files using Java Records'
+            name 'Parquet Record'
+            url 'https://github.com/jerolba/parquet-java-record'
+            licenses {
+                license {
+                    name 'Apache License 2.0'
+                    url 'http://www.apache.org/license/LICENSE-2.0.txt'
+                    distribution 'repo'
+                }
+            }
+            scm {
+                url 'https://github.com/jerolba/parquet-java-record'
+                connection 'scm:git:git://github.com/jerolba/parquet-java-record'
+                developerConnection 'scm:git:ssh://github.com:jerolba/parquet-java-record'
+            }
+            developers {
+                developer {
+                    id 'jerolba'
+                    name 'Jerónimo López'
+                }
+            }
+        }
     }
 }
+
+// }
