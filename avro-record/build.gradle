@@ -73,6 +73,10 @@ publishing {
     }    
 }
 
+signing {
+    sign publishing.publications.mavenJava
+}
+
 def customizePom(pom) {
     pom.withXml {
         def root = asNode()
