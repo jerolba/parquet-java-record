@@ -26,6 +26,7 @@ import org.apache.avro.Schema;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jerolba.record.Alias;
 
 public class JavaRecordToAvroSchemaTest {
 
@@ -297,6 +298,50 @@ public class JavaRecordToAvroSchemaTest {
                                     }
                                 }
                             ]
+                        }
+                    ]
+                }""";
+        assertEqualSchema(expected, schema);
+    }
+
+    public record WithAlias(@Alias("transformed") String original) {
+
+    }
+
+    @Test
+    void fieldAlias() throws IOException {
+        Schema schema = recordToSchema.build(WithAlias.class);
+        String expected = """
+                {
+                    "type": "record",
+                    "name": "WithAlias",
+                    "namespace": "com.jerolba.avro.record",
+                    "fields": [
+                        {
+                            "name": "transformed",
+                            "type": ["string", "null"]
+                        }
+                    ]
+                }""";
+        assertEqualSchema(expected, schema);
+    }
+
+    public record WithNonStandarNameAlias(@Alias("no_stardar_java_name") String original) {
+
+    }
+
+    @Test
+    void nonStandarFieldAlias() throws IOException {
+        Schema schema = recordToSchema.build(WithNonStandarNameAlias.class);
+        String expected = """
+                {
+                    "type": "record",
+                    "name": "WithNonStandarNameAlias",
+                    "namespace": "com.jerolba.avro.record",
+                    "fields": [
+                        {
+                            "name": "no_stardar_java_name",
+                            "type": ["string", "null"]
                         }
                     ]
                 }""";
