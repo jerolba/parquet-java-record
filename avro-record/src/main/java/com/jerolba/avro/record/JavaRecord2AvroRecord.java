@@ -15,6 +15,8 @@
  */
 package com.jerolba.avro.record;
 
+import static com.jerolba.avro.record.AliasField.getFieldName;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -55,8 +57,7 @@ public class JavaRecord2AvroRecord<T> {
         }
         List<FieldMap> mappers = new ArrayList<>();
         for (RecordComponent recordComponent : recordClass.getRecordComponents()) {
-            // Review adding aliasing
-            Field field = schema.getField(recordComponent.getName());
+            Field field = schema.getField(getFieldName(recordComponent));
             mappers.add(new SimpleMapperBuilder(field, recordComponent).buildMapperForField());
         }
         return new RecordInfo(schema, mappers);

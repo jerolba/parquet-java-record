@@ -15,6 +15,8 @@
  */
 package com.jerolba.avro.record;
 
+import static com.jerolba.avro.record.AliasField.getFieldName;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
@@ -57,7 +59,7 @@ public class JavaRecord2Schema {
                 .fields();
 
         for (var attr : recordClass.getRecordComponents()) {
-            var fieldBuilder = fields.name(attr.getName());
+            var fieldBuilder = fields.name(getFieldName(attr));
             Class<?> type = attr.getType();
 
             Function<BaseFieldTypeBuilder<Schema>, FieldDefault<Schema, ?>> typeDef = buildTypeDef(type);

@@ -28,6 +28,8 @@ import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.jerolba.record.Alias;
+
 public class AvroRecordWriterTest {
 
     public enum OrgType {
@@ -217,6 +219,53 @@ public class AvroRecordWriterTest {
             EnumCollection value = writerTest.getReadIterator().next();
             assertEquals(rec, value);
         }
+    }
+
+    @Nested
+    class AliasField {
+
+        public record WithAlias(@Alias("frooo") String foo, @Alias("braaar") int bar) {
+
+        }
+
+        public record WithOutAlias(String frooo, int braaar) {
+
+        }
+
+        @Test
+        void writeFileWithAlias() throws IOException {
+            var rec = new WithAlias("some value", 1);
+            var writerTest = new AvroWriterTest<>("/tmp/withAlias.avro", WithAlias.class);
+            writerTest.write(rec);
+
+            var reader = new AvroRecordReader<>("/tmp/withAlias.avro", WithOutAlias.class);
+            WithOutAlias value = reader.iterator().next();
+            assertEquals(rec.bar(), value.braaar());
+            assertEquals(rec.foo(), value.frooo());
+        }
+
+        @Test
+        void readFileWithAlias() throws IOException {
+            var rec = new WithOutAlias("some value", 1);
+            var writerTest = new AvroWriterTest<>("/tmp/withAlias.avro", WithOutAlias.class);
+            writerTest.write(rec);
+
+            var reader = new AvroRecordReader<>("/tmp/withAlias.avro", WithAlias.class);
+            WithAlias value = reader.iterator().next();
+            assertEquals(rec.braaar(), value.bar());
+            assertEquals(rec.frooo(), value.foo());
+        }
+
+        @Test
+        void writeAndReadWithAlias() throws IOException {
+            var rec = new WithAlias("some value", 1);
+            var writerTest = new AvroWriterTest<>("/tmp/withAlias.avro", WithAlias.class);
+            writerTest.write(rec);
+
+            WithAlias value = writerTest.getReadIterator().next();
+            assertEquals(rec, value);
+        }
+
     }
 
     private class AvroWriterTest<T> {

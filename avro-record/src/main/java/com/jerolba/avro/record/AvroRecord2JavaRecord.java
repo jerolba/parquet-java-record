@@ -15,6 +15,7 @@
  */
 package com.jerolba.avro.record;
 
+import static com.jerolba.avro.record.AliasField.getFieldName;
 import static org.apache.avro.Schema.Type.ARRAY;
 import static org.apache.avro.Schema.Type.RECORD;
 
@@ -60,8 +61,7 @@ public class AvroRecord2JavaRecord<T> {
         }
         List<Function<GenericRecord, Object>> mappers = new ArrayList<>();
         for (RecordComponent recordComponent : recordClass.getRecordComponents()) {
-            // Review adding aliasing
-            Field field = schema.getField(recordComponent.getName());
+            Field field = schema.getField(getFieldName(recordComponent));
             mappers.add(buildMapperForField(recordComponent, field));
         }
         return new RecordInfo(findConstructor(recordClass), mappers);
