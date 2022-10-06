@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'java-library'    
     id 'jacoco'
 	id 'checkstyle'
     id 'maven-publish'
@@ -17,10 +18,10 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.apache.avro:avro:1.10.1'
+	implementation 'org.apache.avro:avro:1.10.2'
 	
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.1'
 }
 
 test {
@@ -49,7 +50,7 @@ publishing {
             customizePom(pom)
             groupId 'com.jerolba'
             artifactId 'avro-record'
-            version '0.0.1'
+            version version
 
             from components.java
 
