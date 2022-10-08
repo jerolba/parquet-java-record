@@ -17,18 +17,6 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    api project(':data-record')
-	implementation 'org.apache.avro:avro:1.10.2'
-	
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.1'
-}
-
-test {
-    useJUnitPlatform()
-}
-
 task sourceJar(type: Jar) {
     classifier "sources"
     from sourceSets.main.allJava
@@ -49,6 +37,7 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             customizePom(pom)
+            artifactId 'data-record'
             version version
 
             from components.java
@@ -83,8 +72,8 @@ def customizePom(pom) {
         root.children().last() + {
             resolveStrategy = Closure.DELEGATE_FIRST
 
-            description 'Avro Record serialize/deserialize Avro files using Java Records'
-            name 'Avro Record'
+            description 'Implement data oriented operations with Java Records'
+            name 'Data Record'
             url 'https://github.com/jerolba/parquet-java-record'
             licenses {
                 license {

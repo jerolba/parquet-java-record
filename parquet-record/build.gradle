@@ -19,6 +19,7 @@ repositories {
 
 dependencies {
 	implementation project(':avro-record')
+	api project(':data-record')
 	api 'org.apache.parquet:parquet-common:1.12.3'
 	api 'org.apache.parquet:parquet-column:1.12.3'
     api 'org.apache.parquet:parquet-hadoop:1.12.3'
@@ -121,7 +122,6 @@ publishing {
 	    repositories {
 	        maven {
 	            url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-	            //url 'https://oss.sonatype.org/content/repositories/snapshots/'
 	            credentials {
 	                username sonatypeUsername
 	                password sonatypePassword
@@ -142,7 +142,6 @@ def customizePom(pom) {
     pom.withXml {
         def root = asNode()
 
-        // add all items necessary for maven central publication
         root.children().last() + {
             resolveStrategy = Closure.DELEGATE_FIRST
 
@@ -170,5 +169,3 @@ def customizePom(pom) {
         }
     }
 }
-
-// }
