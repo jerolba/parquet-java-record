@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.hadoop.ParquetReader;
@@ -48,7 +49,9 @@ public class ParquetRecordReader<T> {
     }
 
     public Iterator<T> iterator() throws IOException {
-        ParquetReader<GenericRecord> reader = AvroParquetReader.<GenericRecord>builder(inputFile).build();
+        ParquetReader<GenericRecord> reader = AvroParquetReader.<GenericRecord>builder(inputFile)
+                .withDataModel(GenericData.get())
+                .build();
         return new RecordIterator<>(recordClass, reader);
     }
 

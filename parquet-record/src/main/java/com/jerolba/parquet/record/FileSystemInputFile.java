@@ -26,7 +26,8 @@ import org.apache.parquet.io.SeekableInputStream;
 /*
  * Parquet InputFile implementation for a traditional File System input.
  * Some code is inspired from:
- * https://github.com/benwatson528/intellij-avro-parquet-plugin/blob/master/src/main/java/uk/co/hadoopathome/intellij/viewer/fileformat/LocalInputFile.java
+ * https://github.com/benwatson528/intellij-avro-parquet-plugin/blob/master/src/main/java/uk/co \
+ * /hadoopathome/intellij/viewer/fileformat/LocalInputFile.java
  * https://github.com/tideworks/arvo2parquet/blob/master/src/main/java/com/tideworks/data_load/io/InputFile.java
  *
  */

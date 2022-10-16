@@ -51,8 +51,10 @@ public class JavaRecord2Schema {
         }
         visited.add(recordClass);
 
-        var namespace = recordClass.getPackageName().replaceAll("\\$", ".");
-        var record = recordClass.getSimpleName().replaceAll("\\$", ".");
+        String canonicalName = recordClass.getCanonicalName();
+        String record = recordClass.getSimpleName();
+        String namespace = canonicalName.substring(0, canonicalName.length() - record.length() - 1);
+
         FieldAssembler<Schema> fields = SchemaBuilder.builder()
                 .record(record)
                 .namespace(namespace)

@@ -38,14 +38,6 @@ import org.junit.jupiter.api.Test;
 
 class ParquetRecordReaderTest {
 
-    public record PrimitivesAndObjects(String name,
-            int intPrimitive, Integer intObject,
-            long longPrimitive, Long longObject,
-            float floatPrimitive, Float floatObject,
-            double doublePrimitive, Double doubleObject,
-            boolean booleanPrimitive, Boolean booleanObject) {
-    }
-
     @Test
     void primitivesAndObjectsTypes() throws IOException {
         Schema schema = SchemaBuilder.builder()

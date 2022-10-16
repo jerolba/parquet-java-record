@@ -30,14 +30,6 @@ import com.jerolba.record.Alias;
 
 public class JavaRecordToAvroSchemaTest {
 
-    public record PrimitivesAndObjects(String name,
-            int intPrimitive, Integer intObject,
-            long longPrimitive, Long longObject,
-            float floatPrimitive, Float floatObject,
-            double doublePrimitive, Double doubleObject,
-            boolean booleanPrimitive, Boolean booleanObject) {
-    }
-
     JavaRecord2Schema recordToSchema = new JavaRecord2Schema();
 
     @Test
@@ -101,7 +93,7 @@ public class JavaRecordToAvroSchemaTest {
                 {
                     "type": "record",
                     "name": "CompositeMain",
-                    "namespace": "com.jerolba.avro.record",
+                    "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest",
                     "fields": [
                         {
                             "name": "name",
@@ -168,7 +160,7 @@ public class JavaRecordToAvroSchemaTest {
                 {
                     "type": "record",
                     "name": "WithEnum",
-                    "namespace": "com.jerolba.avro.record",
+                    "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest",
                     "fields": [
                         {
                             "name": "name",
@@ -200,7 +192,7 @@ public class JavaRecordToAvroSchemaTest {
                 {
                     "type": "record",
                     "name": "CompositeMainCollection",
-                    "namespace": "com.jerolba.avro.record",
+                    "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest",
                     "fields": [
                         {
                             "name": "name",
@@ -251,7 +243,7 @@ public class JavaRecordToAvroSchemaTest {
                 {
                     "type": "record",
                     "name": "SimpleCollection",
-                    "namespace": "com.jerolba.avro.record",
+                    "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest",
                     "fields": [
                         {
                             "name": "name",
@@ -315,7 +307,7 @@ public class JavaRecordToAvroSchemaTest {
                 {
                     "type": "record",
                     "name": "WithAlias",
-                    "namespace": "com.jerolba.avro.record",
+                    "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest",
                     "fields": [
                         {
                             "name": "transformed",
@@ -337,7 +329,7 @@ public class JavaRecordToAvroSchemaTest {
                 {
                     "type": "record",
                     "name": "WithNonStandarNameAlias",
-                    "namespace": "com.jerolba.avro.record",
+                    "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest",
                     "fields": [
                         {
                             "name": "no_stardar_java_name",
