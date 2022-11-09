@@ -28,7 +28,7 @@ import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.jerolba.record.Alias;
+import com.jerolba.record.annotation.Alias;
 
 public class AvroRecordWriterTest {
 

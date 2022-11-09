@@ -17,7 +17,7 @@ package com.jerolba.avro.record;
 
 import java.lang.reflect.RecordComponent;
 
-import com.jerolba.record.Alias;
+import com.jerolba.record.annotation.Alias;
 
 class AliasField {
 

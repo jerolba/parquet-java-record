@@ -26,7 +26,7 @@ import org.apache.avro.Schema;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jerolba.record.Alias;
+import com.jerolba.record.annotation.Alias;
 
 public class JavaRecordToAvroSchemaTest {
 
