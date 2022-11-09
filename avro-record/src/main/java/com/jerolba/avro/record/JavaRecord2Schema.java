@@ -85,7 +85,7 @@ public class JavaRecord2Schema {
     }
 
     private String[] enumSymbols(Class<?> type) {
-        Object[] enumConstants = ((Class) type).getEnumConstants();
+        Object[] enumConstants = type.getEnumConstants();
         return Stream.of(enumConstants).map(Object::toString).toArray(String[]::new);
     }
 
