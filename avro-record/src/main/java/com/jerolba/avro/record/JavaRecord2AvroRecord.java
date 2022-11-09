@@ -17,8 +17,11 @@ package com.jerolba.avro.record;
 
 import static com.jerolba.avro.record.AliasField.getFieldName;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.invoke.CallSite;
+import java.lang.invoke.LambdaMetafactory;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
@@ -30,7 +33,7 @@ import java.util.function.Function;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericEnumSymbol;
+import org.apache.avro.generic.GenericData.EnumSymbol;
 import org.apache.avro.generic.GenericRecord;
 
 public class JavaRecord2AvroRecord<T> {
@@ -48,17 +51,21 @@ public class JavaRecord2AvroRecord<T> {
     }
 
     public JavaRecord2AvroRecord(Class<T> recordClass, Schema schema) {
-        this.recordInfo = buildRecordInfo(recordClass, schema);
+        try {
+            this.recordInfo = buildRecordInfo(recordClass, schema);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private RecordInfo buildRecordInfo(Class<?> recordClass, Schema schema) {
+    private RecordInfo buildRecordInfo(Class<?> recordClass, Schema schema) throws Throwable {
         if (!recordClass.isRecord()) {
             throw new IllegalArgumentException(recordClass.getName() + " is not a Java Record");
         }
         List<FieldMap> mappers = new ArrayList<>();
         for (RecordComponent recordComponent : recordClass.getRecordComponents()) {
             Field field = schema.getField(getFieldName(recordComponent));
-            mappers.add(new SimpleMapperBuilder(field, recordComponent).buildMapperForField());
+            mappers.add(new SimpleMapperBuilder(field, recordClass, recordComponent).buildMapperForField());
         }
         return new RecordInfo(schema, mappers);
     }
@@ -68,6 +75,9 @@ public class JavaRecord2AvroRecord<T> {
     }
 
     private GenericRecord map(RecordInfo recordInfo, Object obj) {
+        if (obj == null) {
+            return null;
+        }
         GenericData.Record record = new GenericData.Record(recordInfo.schema());
         for (var fieldMapper : recordInfo.mappers()) {
             Object value = fieldMapper.mapper().apply(obj);
@@ -85,25 +95,27 @@ public class JavaRecord2AvroRecord<T> {
     private class SimpleMapperBuilder {
 
         private final Field avroField;
+        private final Class<?> targetClass;
         private final RecordComponent recordComponent;
-        private final Method accessor;
+        private final Function<Object, Object> recordAccessor;
 
-        SimpleMapperBuilder(Field avroField, RecordComponent recordComponent) {
+        SimpleMapperBuilder(Field avroField, Class<?> targetClass, RecordComponent recordComponent) throws Throwable {
             this.avroField = avroField;
+            this.targetClass = targetClass;
             this.recordComponent = recordComponent;
-            this.accessor = recordComponent.getAccessor();
+            this.recordAccessor = recordAccessor(targetClass, recordComponent);
         }
 
-        public FieldMap buildMapperForField() {
+        public FieldMap buildMapperForField() throws Throwable {
             Class<?> attrJavaType = recordComponent.getType();
             if (attrJavaType.isRecord()) {
                 return getRecordTypeMapper();
             }
             if (recordComponent.getGenericType() instanceof ParameterizedType) {
-                return new CollectionMapperBuilder(avroField, recordComponent).getMapper();
+                return new CollectionMapperBuilder(avroField, targetClass, recordComponent).getMapper();
             }
             if (SIMPLE_MAPPER.contains(attrJavaType.getName())) {
-                return new FieldMap(avroField, record -> safeInvoke(accessor, record));
+                return new FieldMap(avroField, recordAccessor);
             }
             if (attrJavaType.isEnum()) {
                 return getEnumMapper();
@@ -111,24 +123,19 @@ public class JavaRecord2AvroRecord<T> {
             throw new RuntimeException(attrJavaType + " type not supported");
         }
 
-        private FieldMap getRecordTypeMapper() {
+        private FieldMap getRecordTypeMapper() throws Throwable {
             Schema childSchema = fieldNotNullSchema(avroField);
             RecordInfo childRecordInfo = buildRecordInfo(recordComponent.getType(), childSchema);
             return new FieldMap(avroField, record -> {
-                Object value = safeInvoke(accessor, record);
-                if (value != null) {
-                    return map(childRecordInfo, value);
-                }
-                return null;
+                Object value = recordAccessor.apply(record);
+                return map(childRecordInfo, value);
             });
         }
 
         private FieldMap getEnumMapper() {
             Schema schema = fieldNotNullSchema(avroField);
-            return new FieldMap(avroField, record -> {
-                Object v = safeInvoke(accessor, record);
-                return v == null ? null : new EnumValue((Enum<?>) v, schema);
-            });
+            EnumsValues enumValues = new EnumsValues(schema, recordComponent.getType());
+            return new FieldMap(avroField, record -> enumValues.getValue(recordAccessor.apply(record)));
         }
     }
 
@@ -136,15 +143,16 @@ public class JavaRecord2AvroRecord<T> {
 
         private final Field avroField;
         private final RecordComponent recordComponent;
-        private final Method accessor;
+        private final Function<Object, Object> recordAccessor;
 
-        CollectionMapperBuilder(Field avroField, RecordComponent recordComponent) {
+        CollectionMapperBuilder(Field avroField, Class<?> targetClass, RecordComponent recordComponent)
+                throws Throwable {
             this.avroField = avroField;
             this.recordComponent = recordComponent;
-            this.accessor = recordComponent.getAccessor();
+            this.recordAccessor = recordAccessor(targetClass, recordComponent);
         }
 
-        private FieldMap getMapper() {
+        private FieldMap getMapper() throws Throwable {
             ParameterizedType paramType = (ParameterizedType) recordComponent.getGenericType();
             Class<?> listType = (Class<?>) paramType.getActualTypeArguments()[0];
             if (listType.isRecord()) {
@@ -154,14 +162,14 @@ public class JavaRecord2AvroRecord<T> {
                 return collectionSimpleMapper();
             }
             if (listType.isEnum()) {
-                return collectionEnumMapper();
+                return collectionEnumMapper(listType);
             }
             throw new RuntimeException("Unsuported type in collection: " + listType.getName());
         }
 
         private FieldMap collectionSimpleMapper() {
             return new FieldMap(avroField, collectionField -> {
-                Object v = safeInvoke(accessor, collectionField);
+                Object v = recordAccessor.apply(collectionField);
                 if (v == null) {
                     return null;
                 }
@@ -169,40 +177,33 @@ public class JavaRecord2AvroRecord<T> {
             });
         }
 
-        private FieldMap collectionEnumMapper() {
+        private FieldMap collectionEnumMapper(Class<?> listType) {
             Schema arrayType = fieldNotNullSchema(avroField).getElementType();
+            EnumsValues enumValues = new EnumsValues(arrayType, listType);
             return new FieldMap(avroField, collectionField -> {
-                Object v = safeInvoke(accessor, collectionField);
+                Object v = recordAccessor.apply(collectionField);
                 if (v == null) {
                     return null;
                 }
                 List<Object> array = new ArrayList<>();
                 for (Object enumValue : (Collection<?>) v) {
-                    if (enumValue != null) {
-                        array.add(new EnumValue((Enum<?>) enumValue, arrayType));
-                    } else {
-                        array.add(null);
-                    }
+                    array.add(enumValues.getValue(enumValue));
                 }
                 return array;
             });
         }
 
-        private FieldMap collectionRecordMapper(Class<?> listType) {
+        private FieldMap collectionRecordMapper(Class<?> listType) throws Throwable {
             Schema arrayType = fieldNotNullSchema(avroField).getElementType();
             RecordInfo childRecordInfo = buildRecordInfo(listType, arrayType);
             return new FieldMap(avroField, record -> {
-                Object v = safeInvoke(accessor, record);
+                Object v = recordAccessor.apply(record);
                 if (v == null) {
                     return null;
                 }
                 List<Object> array = new ArrayList<>();
                 for (Object recordValue : (Collection<?>) v) {
-                    if (recordValue != null) {
-                        array.add(map(childRecordInfo, recordValue));
-                    } else {
-                        array.add(null);
-                    }
+                    array.add(map(childRecordInfo, recordValue));
                 }
                 return array;
             });
@@ -213,39 +214,35 @@ public class JavaRecord2AvroRecord<T> {
         return avroField.schema().getTypes().stream().filter(t -> !t.isNullable()).findFirst().get();
     }
 
-    private Object safeInvoke(Method accessor, Object record) {
-        try {
-            return accessor.invoke(record);
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-            throw new RuntimeException(e);
+    private static class EnumsValues {
+
+        private final EnumSymbol[] values;
+
+        EnumsValues(Schema schema, Class<?> enumType) {
+            Object[] enums = enumType.getEnumConstants();
+            values = new EnumSymbol[enums.length];
+            for (int i = 0; i < enums.length; i++) {
+                values[i] = new EnumSymbol(schema, enums[i].toString());
+            }
+        }
+
+        public Object getValue(Object v) {
+            return v == null ? null : values[((Enum<?>) v).ordinal()];
         }
     }
 
-    private static class EnumValue implements GenericEnumSymbol<EnumValue> {
-
-        private final Enum<?> value;
-        private final Schema schema;
-
-        EnumValue(Enum<?> value, Schema schema) {
-            this.value = value;
-            this.schema = schema;
-        }
-
-        @Override
-        public Schema getSchema() {
-            return schema;
-        }
-
-        @Override
-        public int compareTo(EnumValue o) {
-            return Integer.compare(value.ordinal(), o.value.ordinal());
-        }
-
-        @Override
-        public String toString() {
-            return value.name();
-        }
-
+    private static Function<Object, Object> recordAccessor(Class<?> targetClass, RecordComponent recordComponent)
+            throws Throwable {
+        MethodHandles.Lookup lookup = MethodHandles.lookup();
+        MethodHandle findVirtual = lookup.findVirtual(targetClass, recordComponent.getName(),
+                MethodType.methodType(recordComponent.getType()));
+        CallSite site = LambdaMetafactory.metafactory(lookup,
+                "apply",
+                MethodType.methodType(Function.class),
+                MethodType.methodType(Object.class, Object.class),
+                findVirtual,
+                MethodType.methodType(recordComponent.getType(), targetClass));
+        return (Function<Object, Object>) site.getTarget().invokeExact();
     }
 
 }
