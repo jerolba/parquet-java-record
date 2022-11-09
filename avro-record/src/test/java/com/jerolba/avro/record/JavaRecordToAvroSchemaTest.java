@@ -23,10 +23,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.avro.Schema;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jerolba.record.annotation.Alias;
+import com.jerolba.record.annotation.NotNull;
 
 public class JavaRecordToAvroSchemaTest {
 
@@ -338,6 +340,159 @@ public class JavaRecordToAvroSchemaTest {
                     ]
                 }""";
         assertEqualSchema(expected, schema);
+    }
+
+    @Nested
+    class NotNullAnnotated {
+
+        // All types are not nullables
+        public record NotNullableObjects(@NotNull String name,
+                int intPrimitive, @NotNull Integer intObject,
+                long longPrimitive, @NotNull Long longObject,
+                float floatPrimitive, @NotNull Float floatObject,
+                double doublePrimitive, @NotNull Double doubleObject,
+                boolean booleanPrimitive, @NotNull Boolean booleanObject,
+                @NotNull OrgType orgType) {
+        }
+
+        @Test
+        void notNullableObjects() throws IOException {
+            Schema schema = recordToSchema.build(NotNullableObjects.class);
+            String expected = """
+                    {
+                        "type": "record",
+                        "name": "NotNullableObjects",
+                        "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest.NotNullAnnotated",
+                        "fields": [
+                            {
+                                "name": "name",
+                                "type": "string"
+                            }, {
+                                "name": "intPrimitive",
+                                "type": "int"
+                            }, {
+                                "name": "intObject",
+                                "type": "int"
+                            }, {
+                                "name": "longPrimitive",
+                                "type": "long"
+                            }, {
+                                "name": "longObject",
+                                "type": "long"
+                            }, {
+                                "name": "floatPrimitive",
+                                "type": "float"
+                            }, {
+                                "name": "floatObject",
+                                "type": "float"
+                            }, {
+                                "name": "doublePrimitive",
+                                "type": "double"
+                            }, {
+                                "name": "doubleObject",
+                                "type": "double"
+                            }, {
+                                "name": "booleanPrimitive",
+                                "type": "boolean"
+                            }, {
+                                "name": "booleanObject",
+                                "type": "boolean"
+                            }, {
+                                "name": "orgType",
+                                "type":
+                                    {
+                                        "type": "enum",
+                                        "name": "OrgType",
+                                        "symbols": ["FOO", "BAR", "BAZ"]
+                                    }
+                            }
+                        ]
+                    }""";
+            assertEqualSchema(expected, schema);
+        }
+
+        public record CompositeMainNotNull(@NotNull String name, @NotNull CompositeChildNotNull child) {
+        }
+
+        public record CompositeChildNotNull(@NotNull String id, int value) {
+        }
+
+        @Test
+        void compositeObjectsNotNull() throws IOException {
+            Schema schema = recordToSchema.build(CompositeMainNotNull.class);
+            String expected = """
+                    {
+                        "type": "record",
+                        "name": "CompositeMainNotNull",
+                        "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest.NotNullAnnotated",
+                        "fields": [
+                            {
+                                "name": "name",
+                                "type": "string"
+                            },
+                            {
+                                "name": "child",
+                                "type":
+                                    {
+                                        "type": "record",
+                                        "name": "CompositeChildNotNull",
+                                        "fields": [
+                                            {
+                                                "name": "id",
+                                                "type": "string"
+                                            }, {
+                                                "name": "value",
+                                                "type": "int"
+                                            }
+                                        ]
+                                    }
+                            }
+                        ]
+                    }""";
+            assertEqualSchema(expected, schema);
+        }
+
+        public record CompositeMainNotNullCollection(@NotNull String name, @NotNull List<CompositeChildNotNull> child) {
+        }
+
+        @Test
+        void compositeNotNullCollection() throws IOException {
+            Schema schema = recordToSchema.build(CompositeMainNotNullCollection.class);
+            String expected = """
+                    {
+                        "type": "record",
+                        "name": "CompositeMainNotNullCollection",
+                        "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest.NotNullAnnotated",
+                        "fields": [
+                            {
+                                "name": "name",
+                                "type": "string"
+                            },
+                            {
+                                "name": "child",
+                                "type":
+                                    {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "record",
+                                            "name": "CompositeChildNotNull",
+                                            "fields": [
+                                                {
+                                                    "name": "id",
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "name": "value",
+                                                    "type": "int"
+                                                }
+                                            ]
+                                        }
+                                    }
+                            }
+                        ]
+                    }""";
+            assertEqualSchema(expected, schema);
+        }
     }
 
     private void assertEqualSchema(String str, Schema schema) throws IOException {

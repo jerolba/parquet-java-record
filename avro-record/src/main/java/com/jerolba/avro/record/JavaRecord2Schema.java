@@ -16,6 +16,7 @@
 package com.jerolba.avro.record;
 
 import static com.jerolba.avro.record.AliasField.getFieldName;
+import static com.jerolba.avro.record.NotNullField.isNotNull;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
@@ -66,22 +67,24 @@ public class JavaRecord2Schema {
 
             Function<BaseFieldTypeBuilder<Schema>, FieldDefault<Schema, ?>> typeDef = buildTypeDef(type);
             if (typeDef != null) {
-                BaseFieldTypeBuilder<Schema> beginType;
-                if (!type.isPrimitive()) {
-                    beginType = fieldBuilder.type().nullable();
-                } else {
-                    beginType = fieldBuilder.type();
-                }
+                BaseFieldTypeBuilder<Schema> beginType = nullable(fieldBuilder, type.isPrimitive() || isNotNull(attr));
                 fields = typeDef.apply(beginType).noDefault();
             } else if (type.isEnum()) {
-                fields = fieldBuilder.type().nullable().enumeration(type.getSimpleName())
-                        .symbols(enumSymbols(type)).noDefault();
+                BaseFieldTypeBuilder<Schema> beginType = nullable(fieldBuilder, isNotNull(attr));
+                fields = beginType.enumeration(type.getSimpleName()).symbols(enumSymbols(type)).noDefault();
             } else {
                 fields = compositeSchema(attr, fieldBuilder, visited);
             }
         }
         visited.remove(recordClass);
         return fields.endRecord();
+    }
+
+    private BaseFieldTypeBuilder<Schema> nullable(FieldBuilder<Schema> fieldBuilder, boolean isNotNull) {
+        if (isNotNull) {
+            return fieldBuilder.type();
+        }
+        return fieldBuilder.type().nullable();
     }
 
     private String[] enumSymbols(Class<?> type) {
@@ -108,7 +111,7 @@ public class JavaRecord2Schema {
         Class<?> attrType = attr.getType();
         if (attrType.isRecord()) {
             Schema subSchema = build(attrType, visited);
-            return fieldBuilder.type().unionOf().nullType().and().type(subSchema).endUnion().noDefault();
+            return nullableSchema(attr, fieldBuilder, subSchema);
         }
         Type genericType = attr.getGenericType();
         if (genericType instanceof Class<?>) {
@@ -119,9 +122,17 @@ public class JavaRecord2Schema {
         }
         if (genericType instanceof ParameterizedType paramType) {
             Schema subSchema = childCollection(paramType, visited);
-            return fieldBuilder.type().unionOf().nullType().and().type(subSchema).endUnion().noDefault();
+            return nullableSchema(attr, fieldBuilder, subSchema);
         }
         return null;
+    }
+
+    private FieldAssembler<Schema> nullableSchema(RecordComponent attr, FieldBuilder<Schema> fieldBuilder,
+            Schema schema) {
+        if (isNotNull(attr)) {
+            return fieldBuilder.type(schema).noDefault();
+        }
+        return fieldBuilder.type().unionOf().nullType().and().type(schema).endUnion().noDefault();
     }
 
     private Class<?> getChildCollectionType(ParameterizedType paramType) {

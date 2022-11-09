@@ -21,6 +21,7 @@ dependencies {
     api project(':data-record')
 	implementation "org.apache.avro:avro:1.10.2"
 	
+	testImplementation group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
 }

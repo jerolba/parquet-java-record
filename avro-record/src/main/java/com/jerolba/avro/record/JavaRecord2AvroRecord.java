@@ -211,7 +211,11 @@ public class JavaRecord2AvroRecord<T> {
     }
 
     private Schema fieldNotNullSchema(Field avroField) {
-        return avroField.schema().getTypes().stream().filter(t -> !t.isNullable()).findFirst().get();
+        Schema schema = avroField.schema();
+        if (schema.isUnion()) {
+            return avroField.schema().getTypes().stream().filter(t -> !t.isNullable()).findFirst().get();
+        }
+        return schema;
     }
 
     private static class EnumsValues {
