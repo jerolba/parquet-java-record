@@ -17,6 +17,7 @@ package com.jerolba.avro.record;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.stream.Stream;
@@ -39,17 +40,31 @@ public class AvroRecordWriter<T> {
     }
 
     public void write(String targetPath, Collection<T> collection) throws IOException {
-        this.write(targetPath, collection.stream());
+        write(targetPath, collection.stream());
+    }
+
+    public void write(OutputStream outputStream, Collection<T> collection) throws IOException {
+        write(outputStream, collection.stream());
     }
 
     public void write(String targetPath, Stream<T> stream) throws IOException {
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
-            DataFileWriter<GenericRecord> writer = dataFileWriter.create(schema, new File(targetPath));
-            Iterator<T> it = stream.iterator();
-            while (it.hasNext()) {
-                writer.append(mapper.mapRecord(it.next()));
-            }
+            writeAll(dataFileWriter.create(schema, new File(targetPath)), stream);
+        }
+    }
+
+    public void write(OutputStream outputStream, Stream<T> stream) throws IOException {
+        DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
+            writeAll(dataFileWriter.create(schema, outputStream), stream);
+        }
+    }
+
+    private void writeAll(DataFileWriter<GenericRecord> writer, Stream<T> stream) throws IOException {
+        Iterator<T> it = stream.iterator();
+        while (it.hasNext()) {
+            writer.append(mapper.mapRecord(it.next()));
         }
     }
 
