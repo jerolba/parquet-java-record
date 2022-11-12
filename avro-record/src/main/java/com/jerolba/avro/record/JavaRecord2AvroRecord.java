@@ -117,6 +117,24 @@ public class JavaRecord2AvroRecord<T> {
             if (SIMPLE_MAPPER.contains(attrJavaType.getName())) {
                 return new FieldMap(avroField, recordAccessor);
             }
+            if ("short".equals(attrJavaType.getName()) || "java.lang.Short".equals(attrJavaType.getName())) {
+                return new FieldMap(avroField, value -> {
+                    Object v = recordAccessor.apply(value);
+                    if (v == null) {
+                        return null;
+                    }
+                    return ((Short) v).intValue();
+                });
+            }
+            if ("byte".equals(attrJavaType.getName()) || "java.lang.Byte".equals(attrJavaType.getName())) {
+                return new FieldMap(avroField, value -> {
+                    Object v = recordAccessor.apply(value);
+                    if (v == null) {
+                        return null;
+                    }
+                    return ((Byte) v).intValue();
+                });
+            }
             if (attrJavaType.isEnum()) {
                 return getEnumMapper();
             }

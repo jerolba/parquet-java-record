@@ -222,6 +222,26 @@ public class AvroRecordWriterTest {
     }
 
     @Nested
+    class FieldConversion {
+
+        public record ByteShort(byte fromByte, short fromShort) {
+
+        }
+
+        @Test
+        void writeByteShort() throws IOException {
+            var rec = new ByteShort((byte) 1, (short) 2);
+
+            var writerTest = new AvroWriterTest<>("/tmp/writeByteShort.avro", ByteShort.class);
+            writerTest.write(rec);
+
+            ByteShort value = writerTest.getReadIterator().next();
+            assertEquals(rec, value);
+        }
+
+    }
+
+    @Nested
     class AliasField {
 
         public record WithAlias(@Alias("frooo") String foo, @Alias("braaar") int bar) {

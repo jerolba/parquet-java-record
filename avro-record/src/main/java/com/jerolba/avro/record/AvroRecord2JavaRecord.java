@@ -97,7 +97,12 @@ public class AvroRecord2JavaRecord<T> {
             Type listType = getListCollectionType(recordComponent, avroField, avroAttr);
             return new ArrayMapper((Class<?>) listType, avroField, avroAttr.schema().getElementType()).getMapper();
         }
-        return getSimpleTypeMapper(attrJavaType, avroField.pos());
+        int pos = avroField.pos();
+        Function<Object, Object> mapper = getSimpleTypeMapper(attrJavaType);
+        return record -> {
+            Object v = record.get(pos);
+            return v == null ? null : mapper.apply(v);
+        };
     }
 
     private Function<GenericRecord, Object> getRecordTypeMapper(Class<?> javaType, Field avroField, Schema schema) {
@@ -148,7 +153,11 @@ public class AvroRecord2JavaRecord<T> {
     }
 
     private Object map(RecordInfo recordInfo, GenericRecord record) {
-        Object[] values = recordInfo.mappers().stream().map(m -> m.apply(record)).toArray();
+        List<Function<GenericRecord, Object>> mappers = recordInfo.mappers();
+        Object[] values = new Object[mappers.size()];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = mappers.get(i).apply(record);
+        }
         try {
             return recordInfo.constructor().newInstance(values);
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
@@ -157,22 +166,22 @@ public class AvroRecord2JavaRecord<T> {
         }
     }
 
-    private Function<GenericRecord, Object> getSimpleTypeMapper(Class<?> type, int pos) {
+    private Function<Object, Object> getSimpleTypeMapper(Class<?> type) {
         if (type.equals(java.lang.String.class)) {
-            return record -> {
-                Object v = record.get(pos);
-                return v == null ? null : v.toString();
-            };
+            return Object::toString;
         }
         if (SIMPLE_MAPPER.contains(type.getName())) {
-            return record -> record.get(pos);
+            return v -> v;
+        }
+        if ("byte".equals(type.getName()) || "java.lang.Byte".equals(type.getName())) {
+            return v -> ((Number) v).byteValue();
+        }
+        if ("short".equals(type.getName()) || "java.lang.Short".equals(type.getName())) {
+            return v -> ((Number) v).shortValue();
         }
         if (type.isEnum()) {
             Class<? extends Enum> asEnum = type.asSubclass(Enum.class);
-            return record -> {
-                Object v = record.get(pos);
-                return v == null ? null : Enum.valueOf(asEnum, v.toString());
-            };
+            return v -> Enum.valueOf(asEnum, v.toString());
         }
         throw new RuntimeException(type + " type not supported");
     }
@@ -203,8 +212,8 @@ public class AvroRecord2JavaRecord<T> {
                 if (arrayget == null) {
                     return null;
                 }
-                List<Object> res = new ArrayList<>();
                 Collection<GenericRecord> array = (Collection<GenericRecord>) arrayget;
+                List<Object> res = new ArrayList<>(array.size());
                 for (GenericRecord genericRecord : array) {
                     res.add(map(recursiveRecordInfo, genericRecord));
                 }
@@ -216,44 +225,44 @@ public class AvroRecord2JavaRecord<T> {
             var avroType = schema.getType();
             // TODO: check compatibility between avroType and listType
             if (listType.equals(java.lang.String.class)) {
-                return mapIfNotNull(this::mapListStrings);
+                return mapIfNotNull(Object::toString);
             } else if (SIMPLE_MAPPER.contains(listType.getName())) {
-                return mapIfNotNull(ArrayList::new);
+                return mapIfNotNull(Function.identity());
+            } else if ("byte".equals(listType.getName()) || "java.lang.Byte".equals(listType.getName())) {
+                return mapIfNotNull(v -> ((Number) v).byteValue());
+            } else if ("short".equals(listType.getName()) || "java.lang.Short".equals(listType.getName())) {
+                return mapIfNotNull(v -> ((Number) v).shortValue());
             } else if (listType.isEnum()) {
                 Class<? extends Enum> asEnum = listType.asSubclass(Enum.class);
-                return mapIfNotNull(c -> mapListEnum(c, asEnum));
+                return mapIfNotNull(v -> Enum.valueOf(asEnum, v.toString()));
             }
             throw new RuntimeException("Array type not supported " + listType.getName());
         }
 
-        private Function<GenericRecord, Object> mapIfNotNull(Function<Collection<?>, List<?>> mapper) {
+        private Function<GenericRecord, Object> mapIfNotNull(Function<Object, Object> mapper) {
             return parentRecord -> {
                 Object arrayget = parentRecord.get(pos);
-                return arrayget == null ? null : mapper.apply((Collection<?>) arrayget);
+                if (arrayget == null) {
+                    return null;
+                }
+                List<Object> res = new ArrayList<>();
+                for (var e : (Collection<?>) arrayget) {
+                    res.add(e == null ? null : mapper.apply(e));
+                }
+                return res;
             };
         }
 
-        private List<?> mapListStrings(Collection<?> collection) {
-            List<Object> res = new ArrayList<>();
-            for (var e : collection) {
-                res.add(e == null ? null : e.toString());
-            }
-            return res;
-        }
-
-        private List<?> mapListEnum(Collection<?> collection, Class<? extends Enum> asEnum) {
-            List<Object> res = new ArrayList<>();
-            for (var e : collection) {
-                res.add(e == null ? null : Enum.valueOf(asEnum, e.toString()));
-            }
-            return res;
-        }
     }
 
     private Function<GenericRecord, Object> getMissingParquetAttr(String type) {
         switch (type) {
         case "java.lang.String":
             return r -> null;
+        case "byte", "java.lang.Byte":
+            return r -> (byte) 0;
+        case "short", "java.lang.Short":
+            return r -> (short) 0;
         case "int", "java.lang.Integer":
             return r -> 0;
         case "long", "java.lang.Long":

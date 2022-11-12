@@ -302,6 +302,33 @@ public class JavaRecordToAvroSchemaTest {
 
     }
 
+    public record ByteShort(byte fromByte, short fromShort) {
+
+    }
+
+    @Test
+    void convertByteShortToInteger() throws IOException {
+        Schema schema = recordToSchema.build(ByteShort.class);
+        String expected = """
+                {
+                    "type": "record",
+                    "name": "ByteShort",
+                    "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest",
+                    "fields": [
+                        {
+                            "name": "fromByte",
+                            "type": "int"
+                        },
+                        {
+                            "name": "fromShort",
+                            "type": "int"
+                        }
+
+                    ]
+                }""";
+        assertEqualSchema(expected, schema);
+    }
+
     @Test
     void fieldAlias() throws IOException {
         Schema schema = recordToSchema.build(WithAlias.class);
