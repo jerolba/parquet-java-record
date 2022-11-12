@@ -200,54 +200,29 @@ public class AvroRecord2JavaRecord<T> {
 
         Function<GenericRecord, Object> getMapper() {
             if (schema.getType() == RECORD) {
-                return getArrayRecordTypeMapper();
+                RecordInfo recursiveRecordInfo = buildRecordInfo(listType, schema);
+                return getCollectionMapper(e -> map(recursiveRecordInfo, (GenericRecord) e));
             }
             return getArraySimpleTypeMapper();
         }
 
-        private Function<GenericRecord, Object> getArrayRecordTypeMapper() {
-            RecordInfo recursiveRecordInfo = buildRecordInfo(listType, schema);
-            return parentRecord -> {
-                Object arrayget = parentRecord.get(pos);
-                if (arrayget == null) {
-                    return null;
-                }
-                Collection<GenericRecord> array = (Collection<GenericRecord>) arrayget;
-                List<Object> res = new ArrayList<>(array.size());
-                for (GenericRecord genericRecord : array) {
-                    res.add(map(recursiveRecordInfo, genericRecord));
-                }
-                return res;
-            };
-        }
-
         private Function<GenericRecord, Object> getArraySimpleTypeMapper() {
+//            // TODO: check compatibility between avroType and type
             var avroType = schema.getType();
-            // TODO: check compatibility between avroType and listType
-            if (listType.equals(java.lang.String.class)) {
-                return mapIfNotNull(Object::toString);
-            } else if (SIMPLE_MAPPER.contains(listType.getName())) {
-                return mapIfNotNull(Function.identity());
-            } else if ("byte".equals(listType.getName()) || "java.lang.Byte".equals(listType.getName())) {
-                return mapIfNotNull(v -> ((Number) v).byteValue());
-            } else if ("short".equals(listType.getName()) || "java.lang.Short".equals(listType.getName())) {
-                return mapIfNotNull(v -> ((Number) v).shortValue());
-            } else if (listType.isEnum()) {
-                Class<? extends Enum> asEnum = listType.asSubclass(Enum.class);
-                return mapIfNotNull(v -> Enum.valueOf(asEnum, v.toString()));
-            }
-            throw new RuntimeException("Array type not supported " + listType.getName());
+            Function<Object, Object> simpleTypeMapper = getSimpleTypeMapper(listType);
+            return getCollectionMapper(simpleTypeMapper);
         }
 
-        private Function<GenericRecord, Object> mapIfNotNull(Function<Object, Object> mapper) {
+        private Function<GenericRecord, Object> getCollectionMapper(Function<Object, Object> elementMapper) {
             return parentRecord -> {
                 Object arrayget = parentRecord.get(pos);
                 if (arrayget == null) {
                     return null;
                 }
-                List<Object> res = new ArrayList<>();
-                for (var e : (Collection<?>) arrayget) {
-                    res.add(e == null ? null : mapper.apply(e));
+                Collection<?> array = (Collection<?>) arrayget;
+                List<Object> res = new ArrayList<>(array.size());
+                for (var e : array) {
+                    res.add(e == null ? null : elementMapper.apply(e));
                 }
                 return res;
             };
