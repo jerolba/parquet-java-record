@@ -16,12 +16,12 @@
 package com.jerolba.avro.record;
 
 import static com.jerolba.avro.record.AliasField.getFieldName;
+import static java.lang.invoke.MethodType.methodType;
 
 import java.lang.invoke.CallSite;
 import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
@@ -155,6 +155,7 @@ public class JavaRecord2AvroRecord<T> {
             EnumsValues enumValues = new EnumsValues(schema, recordComponent.getType());
             return new FieldMap(avroField, record -> enumValues.getValue(recordAccessor.apply(record)));
         }
+
     }
 
     private class CollectionMapperBuilder {
@@ -186,46 +187,40 @@ public class JavaRecord2AvroRecord<T> {
         }
 
         private FieldMap collectionSimpleMapper() {
-            return new FieldMap(avroField, collectionField -> {
-                Object v = recordAccessor.apply(collectionField);
-                if (v == null) {
-                    return null;
-                }
-                return new ArrayList<>((Collection<?>) v);
-            });
+            return mapCollection(Function.identity());
         }
 
         private FieldMap collectionEnumMapper(Class<?> listType) {
             Schema arrayType = fieldNotNullSchema(avroField).getElementType();
             EnumsValues enumValues = new EnumsValues(arrayType, listType);
-            return new FieldMap(avroField, collectionField -> {
-                Object v = recordAccessor.apply(collectionField);
-                if (v == null) {
-                    return null;
-                }
-                List<Object> array = new ArrayList<>();
-                for (Object enumValue : (Collection<?>) v) {
-                    array.add(enumValues.getValue(enumValue));
-                }
-                return array;
-            });
+            return mapCollection(enumValues::getValue);
         }
 
         private FieldMap collectionRecordMapper(Class<?> listType) throws Throwable {
             Schema arrayType = fieldNotNullSchema(avroField).getElementType();
             RecordInfo childRecordInfo = buildRecordInfo(listType, arrayType);
+            return mapCollection(recordValue -> map(childRecordInfo, recordValue));
+        }
+
+        private FieldMap mapCollection(Function<Object, Object> elementMapper) {
             return new FieldMap(avroField, record -> {
                 Object v = recordAccessor.apply(record);
                 if (v == null) {
                     return null;
                 }
-                List<Object> array = new ArrayList<>();
-                for (Object recordValue : (Collection<?>) v) {
-                    array.add(map(childRecordInfo, recordValue));
+                Collection<?> src = (Collection<?>) v;
+                List<Object> array = new ArrayList<>(src.size());
+                for (Object value : src) {
+                    if (value == null) {
+                        array.add(null);
+                    } else {
+                        array.add(elementMapper.apply(value));
+                    }
                 }
                 return array;
             });
         }
+
     }
 
     private Schema fieldNotNullSchema(Field avroField) {
@@ -257,13 +252,13 @@ public class JavaRecord2AvroRecord<T> {
             throws Throwable {
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         MethodHandle findVirtual = lookup.findVirtual(targetClass, recordComponent.getName(),
-                MethodType.methodType(recordComponent.getType()));
+                methodType(recordComponent.getType()));
         CallSite site = LambdaMetafactory.metafactory(lookup,
                 "apply",
-                MethodType.methodType(Function.class),
-                MethodType.methodType(Object.class, Object.class),
+                methodType(Function.class),
+                methodType(Object.class, Object.class),
                 findVirtual,
-                MethodType.methodType(recordComponent.getType(), targetClass));
+                methodType(recordComponent.getType(), targetClass));
         return (Function<Object, Object>) site.getTarget().invokeExact();
     }
 
