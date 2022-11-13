@@ -86,16 +86,16 @@ public class AvroRecord2JavaRecord<T> {
         if (avroField == null) {
             return getMissingParquetAttr(attrJavaType.getName());
         }
-        var avroAttr = inspectNullable(avroField);
+        var avroAttr = inspectField(avroField);
         if (avroAttr.isRecord()) {
-            return getRecordTypeMapper(attrJavaType, avroField, avroAttr.schema());
+            return getRecordTypeMapper(attrJavaType, avroAttr);
         }
         Type genericType = recordComponent.getGenericType();
         if (genericType instanceof TypeVariable<?>) {
             throw new RuntimeException("Generic type <" + genericType.toString() + "> not supported in records");
         } else if (genericType instanceof ParameterizedType) {
-            Type listType = getListCollectionType(recordComponent, avroField, avroAttr);
-            return new ArrayMapper((Class<?>) listType, avroField, avroAttr.schema().getElementType()).getMapper();
+            Class<?> listType = getListCollectionType(recordComponent, avroField, avroAttr);
+            return new ArrayMapper(listType, avroAttr.pos(), avroAttr.schema().getElementType()).getMapper();
         }
         int pos = avroField.pos();
         Function<Object, Object> mapper = getSimpleTypeMapper(attrJavaType);
@@ -105,17 +105,21 @@ public class AvroRecord2JavaRecord<T> {
         };
     }
 
-    private Function<GenericRecord, Object> getRecordTypeMapper(Class<?> javaType, Field avroField, Schema schema) {
-        RecordInfo recursiveRecordInfo = buildRecordInfo(javaType, schema);
+    private Function<GenericRecord, Object> getRecordTypeMapper(Class<?> javaType, AvroAtttribute avroAttr) {
+        RecordInfo recursiveRecordInfo = buildRecordInfo(javaType, avroAttr.schema());
+        int pos = avroAttr.pos();
         return parentRecord -> {
-            GenericRecord childRecord = (GenericRecord) parentRecord.get(avroField.pos());
+            GenericRecord childRecord = (GenericRecord) parentRecord.get(pos);
             return childRecord != null ? map(recursiveRecordInfo, childRecord) : null;
         };
     }
 
-    private Type getListCollectionType(RecordComponent recordComponent, Field field, AvroFieldAnalysis fieldAnal) {
+    private Class<?> getListCollectionType(RecordComponent recordComponent, Field field, AvroAtttribute avroAttr) {
         ParameterizedType paramType = (ParameterizedType) recordComponent.getGenericType();
         Class<?> parametizedClass = (Class<?>) paramType.getRawType();
+        if (!avroAttr.isArray()) {
+            throw new RuntimeException("Invalid parquet type " + field.schema().getType() + ", expected Array");
+        }
         if (!Collection.class.isAssignableFrom(parametizedClass)) {
             throw new RuntimeException("Invalid collection type " + paramType.getRawType());
         }
@@ -123,13 +127,10 @@ public class AvroRecord2JavaRecord<T> {
         if (!(listType instanceof Class<?>)) {
             throw new RuntimeException("Invalid type " + parametizedClass + " as " + listType);
         }
-        if (!fieldAnal.isArray()) {
-            throw new RuntimeException("Invalid parquet type " + field.schema().getType() + ", expected Array");
-        }
-        return listType;
+        return (Class<?>) listType;
     }
 
-    record AvroFieldAnalysis(boolean nullable, Schema schema) {
+    record AvroAtttribute(boolean nullable, Schema schema, int pos) {
 
         boolean isRecord() {
             return schema.getType() == RECORD;
@@ -140,13 +141,13 @@ public class AvroRecord2JavaRecord<T> {
         }
     }
 
-    private AvroFieldAnalysis inspectNullable(Field avroField) {
+    private AvroAtttribute inspectField(Field avroField) {
         if (!avroField.schema().isNullable()) {
-            return new AvroFieldAnalysis(false, avroField.schema());
+            return new AvroAtttribute(false, avroField.schema(), avroField.pos());
         }
         for (Schema schema : avroField.schema().getTypes()) {
             if (!schema.isNullable()) {
-                return new AvroFieldAnalysis(true, schema);
+                return new AvroAtttribute(true, schema, avroField.pos());
             }
         }
         return null;
@@ -192,10 +193,10 @@ public class AvroRecord2JavaRecord<T> {
         private final Schema schema;
         private final int pos;
 
-        ArrayMapper(Class<?> listType, Field avroArrayField, Schema schema) {
+        ArrayMapper(Class<?> listType, int pos, Schema schema) {
             this.listType = listType;
             this.schema = schema;
-            this.pos = avroArrayField.pos();
+            this.pos = pos;
         }
 
         Function<GenericRecord, Object> getMapper() {
