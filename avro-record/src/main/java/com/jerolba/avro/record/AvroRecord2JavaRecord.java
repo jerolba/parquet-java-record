@@ -75,6 +75,7 @@ public class AvroRecord2JavaRecord<T> {
         for (var c : declaredConstructors) {
             Class<?>[] parameterTypes = c.getParameterTypes();
             if (Arrays.equals(componentsTypes, parameterTypes, (c1, c2) -> c1.equals(c2) ? 0 : 1)) {
+                c.setAccessible(true);
                 return c;
             }
         }

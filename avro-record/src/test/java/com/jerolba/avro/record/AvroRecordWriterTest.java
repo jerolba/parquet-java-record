@@ -45,7 +45,7 @@ public class AvroRecordWriterTest {
     }
 
     @Test
-    void empryFile() throws IOException {
+    void emptyFile() throws IOException {
         var writerTest = new AvroWriterTest<>("/tmp/emptyFile.avro", PrimitivesAndObjects.class);
         writerTest.write();
 
@@ -72,6 +72,76 @@ public class AvroRecordWriterTest {
 
         PrimitivesAndObjects value = writerTest.getReadIterator().next();
         assertEquals(rec, value);
+    }
+
+    @Nested
+    class Visibility {
+
+        @Test
+        void innerRecord() throws IOException {
+            record InnerRecord(String name) {
+            }
+
+            var rec = new InnerRecord("Smith");
+            var writerTest = new AvroWriterTest<>("/tmp/innerRecord.avro", InnerRecord.class);
+            writerTest.write(rec);
+
+            InnerRecord value = writerTest.getReadIterator().next();
+            assertEquals(rec, value);
+        }
+
+        private record PrivateRecord(String name) {
+        }
+
+        @Test
+        void privateRecord() throws IOException {
+
+            var rec = new PrivateRecord("Smith");
+            var writerTest = new AvroWriterTest<>("/tmp/privateRecord.avro", PrivateRecord.class);
+            writerTest.write(rec);
+
+            PrivateRecord value = writerTest.getReadIterator().next();
+            assertEquals(rec, value);
+        }
+
+        @Test
+        void innerAndPrivateRecord() throws IOException {
+
+            record InnerRecord(PrivateRecord value) {
+
+            }
+
+            var rec = new InnerRecord(new PrivateRecord("Smith"));
+            var writerTest = new AvroWriterTest<>("/tmp/innerAndPrivateRecord.avro", InnerRecord.class);
+            writerTest.write(rec);
+
+            InnerRecord value = writerTest.getReadIterator().next();
+            assertEquals(rec, value);
+        }
+
+        private record PrivateRecursiveRecord(String name, Foo foo) {
+
+            private record Foo(int value) {
+
+            }
+
+            public static Foo foo(int v) {
+                return new Foo(v);
+            }
+
+        }
+
+        @Test
+        void recursivePrivateRecord() throws IOException {
+
+            var rec = new PrivateRecursiveRecord("Smith", PrivateRecursiveRecord.foo(1));
+            var writerTest = new AvroWriterTest<>("/tmp/privateRecursiveRecord.avro", PrivateRecursiveRecord.class);
+            writerTest.write(rec);
+
+            PrivateRecursiveRecord value = writerTest.getReadIterator().next();
+            assertEquals(rec, value);
+        }
+
     }
 
     @Nested

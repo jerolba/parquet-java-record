@@ -45,16 +45,19 @@ public class JavaRecord2Schema {
 
     private Schema build(Class<?> recordClass, Set<Class<?>> visited) {
         if (!recordClass.isRecord()) {
-            throw new RuntimeException(recordClass.getName() + " must be a java Record");
+            throw new RecordTypeConversionException(recordClass.getName() + " must be a java Record");
         }
         if (visited.contains(recordClass)) {
-            throw new RuntimeException("Recusive records are not supported");
+            throw new RecordTypeConversionException("Recusive records are not supported");
         }
         visited.add(recordClass);
 
-        String canonicalName = recordClass.getCanonicalName();
+        String name = recordClass.getCanonicalName();
+        if (name == null) {
+            name = recordClass.getName();
+        }
         String record = recordClass.getSimpleName();
-        String namespace = canonicalName.substring(0, canonicalName.length() - record.length() - 1);
+        String namespace = name.substring(0, name.length() - record.length() - 1);
 
         FieldAssembler<Schema> fields = SchemaBuilder.builder()
                 .record(record)
@@ -115,10 +118,10 @@ public class JavaRecord2Schema {
         }
         Type genericType = attr.getGenericType();
         if (genericType instanceof Class<?>) {
-            throw new RuntimeException(genericType.toString() + " is not a Java record");
+            throw new RecordTypeConversionException(genericType.toString() + " is not a Java record");
         }
         if (genericType instanceof TypeVariable<?>) {
-            throw new RuntimeException(genericType.toString() + " generic types not supported");
+            throw new RecordTypeConversionException(genericType.toString() + " generic types not supported");
         }
         if (genericType instanceof ParameterizedType paramType) {
             Schema subSchema = childCollection(paramType, visited);
@@ -138,11 +141,11 @@ public class JavaRecord2Schema {
     private Class<?> getChildCollectionType(ParameterizedType paramType) {
         Class<?> parametizedClass = (Class<?>) paramType.getRawType();
         if (!Collection.class.isAssignableFrom(parametizedClass)) {
-            throw new RuntimeException("Invalid collection type " + paramType.getRawType());
+            throw new RecordTypeConversionException("Invalid collection type " + paramType.getRawType());
         }
         Type listType = paramType.getActualTypeArguments()[0];
         if (!(listType instanceof Class<?>)) {
-            throw new RuntimeException("Invalid type " + parametizedClass + " as " + listType);
+            throw new RecordTypeConversionException("Invalid type " + parametizedClass + " as " + listType);
         }
         return (Class<?>) listType;
     }

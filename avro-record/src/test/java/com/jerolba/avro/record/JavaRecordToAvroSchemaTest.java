@@ -35,6 +35,56 @@ public class JavaRecordToAvroSchemaTest {
     JavaRecord2Schema recordToSchema = new JavaRecord2Schema();
 
     @Test
+    void innerRecord() throws IOException {
+        record InnerRecord(String name) {
+
+        }
+
+        Schema schema = recordToSchema.build(InnerRecord.class);
+        String expected = """
+                {
+                    "type": "record",
+                    "name": "InnerRecord",
+                    "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest$",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    ]
+                }""";
+        assertEqualSchema(expected, schema);
+    }
+
+    record PrivateRecord(String name) {
+
+    }
+
+    @Test
+    void privateRecord() throws IOException {
+        Schema schema = recordToSchema.build(PrivateRecord.class);
+        String expected = """
+                {
+                    "type": "record",
+                    "name": "PrivateRecord",
+                    "namespace": "com.jerolba.avro.record.JavaRecordToAvroSchemaTest",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    ]
+                }""";
+        assertEqualSchema(expected, schema);
+    }
+
+    @Test
     void basicTypesSchema() throws IOException {
         Schema schema = recordToSchema.build(PrimitivesAndObjects.class);
         String expected = """
