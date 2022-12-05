@@ -30,6 +30,13 @@ test {
     useJUnitPlatform()
 }
 
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        html.enabled true
+    }
+}
+
 task sourceJar(type: Jar) {
     classifier "sources"
     from sourceSets.main.allJava
