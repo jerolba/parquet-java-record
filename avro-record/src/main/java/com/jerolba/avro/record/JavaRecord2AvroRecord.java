@@ -32,6 +32,7 @@ import java.util.function.Function;
 
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
+import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericData.EnumSymbol;
 import org.apache.avro.generic.GenericRecord;
@@ -60,7 +61,7 @@ public class JavaRecord2AvroRecord<T> {
 
     private RecordInfo buildRecordInfo(Class<?> recordClass, Schema schema) throws Throwable {
         if (!recordClass.isRecord()) {
-            throw new IllegalArgumentException(recordClass.getName() + " is not a Java Record");
+            throw new RecordTypeConversionException(recordClass.getName() + " is not a Java Record");
         }
         List<FieldMap> mappers = new ArrayList<>();
         for (RecordComponent recordComponent : recordClass.getRecordComponents()) {
@@ -95,12 +96,14 @@ public class JavaRecord2AvroRecord<T> {
     private class SimpleMapperBuilder {
 
         private final Field avroField;
+        private final Schema fieldSchema;
         private final Class<?> targetClass;
         private final RecordComponent recordComponent;
         private final Function<Object, Object> recordAccessor;
 
         SimpleMapperBuilder(Field avroField, Class<?> targetClass, RecordComponent recordComponent) throws Throwable {
             this.avroField = avroField;
+            this.fieldSchema = fieldNotNullSchema(avroField);
             this.targetClass = targetClass;
             this.recordComponent = recordComponent;
             this.recordAccessor = recordAccessor(targetClass, recordComponent);
@@ -111,7 +114,7 @@ public class JavaRecord2AvroRecord<T> {
             if (attrJavaType.isRecord()) {
                 return getRecordTypeMapper();
             }
-            if (recordComponent.getGenericType() instanceof ParameterizedType) {
+            if (fieldSchema.getType() == Type.ARRAY && recordComponent.getGenericType() instanceof ParameterizedType) {
                 return new CollectionMapperBuilder(avroField, targetClass, recordComponent).getMapper();
             }
             if (SIMPLE_MAPPER.contains(attrJavaType.getName())) {
@@ -138,12 +141,11 @@ public class JavaRecord2AvroRecord<T> {
             if (attrJavaType.isEnum()) {
                 return getEnumMapper();
             }
-            throw new RuntimeException(attrJavaType + " type not supported");
+            throw new RecordTypeConversionException(attrJavaType + " type not supported");
         }
 
         private FieldMap getRecordTypeMapper() throws Throwable {
-            Schema childSchema = fieldNotNullSchema(avroField);
-            RecordInfo childRecordInfo = buildRecordInfo(recordComponent.getType(), childSchema);
+            RecordInfo childRecordInfo = buildRecordInfo(recordComponent.getType(), fieldSchema);
             return new FieldMap(avroField, record -> {
                 Object value = recordAccessor.apply(record);
                 return map(childRecordInfo, value);
@@ -151,8 +153,7 @@ public class JavaRecord2AvroRecord<T> {
         }
 
         private FieldMap getEnumMapper() {
-            Schema schema = fieldNotNullSchema(avroField);
-            EnumsValues enumValues = new EnumsValues(schema, recordComponent.getType());
+            EnumsValues enumValues = new EnumsValues(fieldSchema, recordComponent.getType());
             return new FieldMap(avroField, record -> enumValues.getValue(recordAccessor.apply(record)));
         }
 
@@ -183,7 +184,7 @@ public class JavaRecord2AvroRecord<T> {
             if (listType.isEnum()) {
                 return collectionEnumMapper(listType);
             }
-            throw new RuntimeException("Unsuported type in collection: " + listType.getName());
+            throw new RecordTypeConversionException("Unsuported type in collection: " + listType.getName());
         }
 
         private FieldMap collectionSimpleMapper() {

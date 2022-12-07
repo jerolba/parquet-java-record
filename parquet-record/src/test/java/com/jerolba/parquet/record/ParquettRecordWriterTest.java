@@ -252,8 +252,7 @@ public class ParquettRecordWriterTest {
             data.add(new VolumeMain(mainId, mainName, foo, dataChild, dataChild.size(), options[rnd.nextInt(4)]));
         }
 
-        OutputStreamOutputFile output = new OutputStreamOutputFile(
-                new FileOutputStream("/tmp/highVolume.parquet"));
+        FileSystemOutputFile output = new FileSystemOutputFile(new File("/tmp/highVolume.parquet"));
         ParquetRecordWriterConfig<VolumeMain> config = new ParquetRecordWriterConfig.Builder<>(output, VolumeMain.class)
                 .build();
         ParquetRecordWriter<VolumeMain> writer = new ParquetRecordWriter<>(config);

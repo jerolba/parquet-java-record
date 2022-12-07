@@ -22,14 +22,36 @@ import java.io.IOException;
 import org.apache.parquet.io.OutputFile;
 import org.apache.parquet.io.PositionOutputStream;
 
+/**
+ *
+ * Class for writing to a file on the file system using the Parquet output file
+ * interface.
+ *
+ * @author jerolba
+ */
 public class FileSystemOutputFile implements OutputFile {
 
     private final File file;
 
+    /**
+     *
+     * Constructs a FileSystemOutputFile with the specified file.
+     *
+     * @param file the file to write to
+     */
     public FileSystemOutputFile(File file) {
         this.file = file;
     }
 
+    /**
+     *
+     * Creates an output stream for writing to the file.
+     *
+     * @param blockSizeHint the block size hint, ignored by this implementation
+     * @return a new PositionOutputStream for writing to the file
+     * @throws IOException if the file already exists or an error occurs while
+     *                     creating the output stream
+     */
     @Override
     public PositionOutputStream create(long blockSizeHint) throws IOException {
         if (file.exists()) {
@@ -38,16 +60,37 @@ public class FileSystemOutputFile implements OutputFile {
         return createOrOverwrite(blockSizeHint);
     }
 
+    /**
+     *
+     * Creates or overwrites an output stream for writing to the file.
+     *
+     * @param blockSizeHint the block size hint, ignored by this implementation
+     * @return a new PositionOutputStream for writing to the file
+     * @throws IOException if an error occurs while creating the output stream
+     */
     @Override
     public PositionOutputStream createOrOverwrite(long blockSizeHint) throws IOException {
         return new CountedPositionOutputStream(new FileOutputStream(file));
     }
 
+    /**
+     *
+     * Returns false to indicate that this implementation does not support block
+     * sizes.
+     *
+     * @return false
+     */
     @Override
     public boolean supportsBlockSize() {
         return false;
     }
 
+    /**
+     * 
+     * Returns 0 to indicate that this implementation does not support block sizes.
+     * 
+     * @return 0
+     */
     @Override
     public long defaultBlockSize() {
         return 0;

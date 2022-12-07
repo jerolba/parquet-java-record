@@ -33,20 +33,51 @@ public class AvroRecordWriter<T> {
     private final Schema schema;
     private final JavaRecord2AvroRecord<T> mapper;
 
+    /**
+     * Constructs a new AvroRecordWriter to write records of the specified type to
+     * an Avro file.
+     *
+     * @param recordClass the class of the records to be written
+     * @throws IOException if an I/O error occurs while building the schema for the
+     *                     records
+     */
     public AvroRecordWriter(Class<T> recordClass) throws IOException {
         JavaRecord2Schema toSchema = new JavaRecord2Schema();
         schema = toSchema.build(recordClass);
         mapper = new JavaRecord2AvroRecord<>(recordClass, schema);
     }
 
+    /**
+     * Writes the specified collection of records to the Avro file with the
+     * specified path.
+     *
+     * @param targetPath the path of the Avro file to write the records to
+     * @param collection the collection of records to write
+     * @throws IOException if an I/O error occurs while writing to the file
+     */
     public void write(String targetPath, Collection<T> collection) throws IOException {
         write(targetPath, collection.stream());
     }
 
+    /**
+     * Writes the specified collection of records to the specified OutputStream.
+     *
+     * @param outputStream the OutputStream to write the records to
+     * @param collection   the collection of records to write
+     * @throws IOException if an I/O error occurs while writing to the OutputStream
+     */
     public void write(OutputStream outputStream, Collection<T> collection) throws IOException {
         write(outputStream, collection.stream());
     }
 
+    /**
+     * Writes the records in the specified stream to the Avro file with the
+     * specified path.
+     *
+     * @param targetPath the path of the Avro file to write the records to
+     * @param stream     the stream of records to write
+     * @throws IOException if an I/O error occurs while writing to the file
+     */
     public void write(String targetPath, Stream<T> stream) throws IOException {
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
@@ -54,6 +85,13 @@ public class AvroRecordWriter<T> {
         }
     }
 
+    /**
+     * Writes the records in the specified stream to the specified OutputStream.
+     *
+     * @param outputStream the OutputStream to write the records to
+     * @param stream       the stream of records to write
+     * @throws IOException if an I/O error occurs while writing to the OutputStream
+     */
     public void write(OutputStream outputStream, Stream<T> stream) throws IOException {
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {

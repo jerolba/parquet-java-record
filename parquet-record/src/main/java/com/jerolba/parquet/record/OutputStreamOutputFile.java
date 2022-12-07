@@ -21,29 +21,69 @@ import java.io.OutputStream;
 import org.apache.parquet.io.OutputFile;
 import org.apache.parquet.io.PositionOutputStream;
 
+/**
+ *
+ * Class for writing to an OutputStream using the Parquet output file interface.
+ *
+ */
 public class OutputStreamOutputFile implements OutputFile {
 
     private final OutputStream outputStream;
 
+    /**
+     *
+     * Constructs an OutputStreamOutputFile with the specified OutputStream.
+     *
+     * @param outputStream the OutputStream to write to
+     */
     public OutputStreamOutputFile(OutputStream outputStream) {
         this.outputStream = outputStream;
     }
 
+    /**
+     *
+     * Creates an output stream for writing.
+     *
+     * @param blockSizeHint the block size hint, ignored by this implementation
+     * @return a new PositionOutputStream for writing to the OutputStream
+     * @throws IOException if an error occurs while creating the output stream
+     */
     @Override
     public PositionOutputStream create(long blockSizeHint) throws IOException {
         return new CountedPositionOutputStream(outputStream);
     }
 
+    /**
+     *
+     * Creates or overwrites an output stream for writing.
+     *
+     * @param blockSizeHint the block size hint, ignored by this implementation
+     * @return a new PositionOutputStream for writing to the OutputStream
+     * @throws IOException if an error occurs while creating the output stream
+     */
     @Override
     public PositionOutputStream createOrOverwrite(long blockSizeHint) throws IOException {
         return new CountedPositionOutputStream(outputStream);
     }
 
+    /**
+     *
+     * Returns false to indicate that this implementation does not support block
+     * sizes.
+     *
+     * @return false
+     */
     @Override
     public boolean supportsBlockSize() {
         return false;
     }
 
+    /**
+     * 
+     * Returns 0 to indicate that this implementation does not support block sizes.
+     * 
+     * @return 0
+     */
     @Override
     public long defaultBlockSize() {
         return 0;

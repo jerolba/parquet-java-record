@@ -18,11 +18,13 @@ package com.jerolba.avro.record;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
@@ -31,6 +33,7 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -479,6 +482,103 @@ class AvroRecordReaderTest {
         });
 
         assertThrows(RuntimeException.class, () -> avroTest.iterator(WithGenericField.class));
+    }
+
+    @Nested
+    class StreamTest {
+
+        record Data(String id, int value) {
+
+        }
+
+        @BeforeEach
+        public void setup() throws IOException {
+            AvroRecordWriter<Data> writer = new AvroRecordWriter<>(Data.class);
+            writer.write("/tmp/dataToRead.avro", List.of(
+                    new Data("foo", 1),
+                    new Data("bar", 2),
+                    new Data("baz", 3)));
+        }
+
+        @Test
+        void read() throws IOException {
+            AvroRecordReader<Data> reader = new AvroRecordReader<>("/tmp/dataToRead.avro", Data.class);
+            List<Data> readed = reader.stream().toList();
+            assertEquals(new Data("foo", 1), readed.get(0));
+            assertEquals(new Data("bar", 2), readed.get(1));
+            assertEquals(new Data("baz", 3), readed.get(2));
+        }
+
+        @Test
+        void skip() throws IOException {
+            AvroRecordReader<Data> reader = new AvroRecordReader<>("/tmp/dataToRead.avro", Data.class);
+            List<Data> readed = reader.stream().skip(2).toList();
+            assertEquals(new Data("baz", 3), readed.get(0));
+            assertEquals(1, readed.size());
+        }
+
+        @Test
+        void limit() throws IOException {
+            AvroRecordReader<Data> reader = new AvroRecordReader<>("/tmp/dataToRead.avro", Data.class);
+            List<Data> readed = reader.stream().limit(1).toList();
+            assertEquals(new Data("foo", 1), readed.get(0));
+            assertEquals(1, readed.size());
+        }
+
+        @Test
+        void empty() throws IOException {
+            AvroRecordWriter<Data> writer = new AvroRecordWriter<>(Data.class);
+            writer.write("/tmp/dataToRead.avro", List.of());
+            AvroRecordReader<Data> reader = new AvroRecordReader<>("/tmp/dataToRead.avro", Data.class);
+            List<Data> readed = reader.stream().toList();
+            assertTrue(readed.isEmpty());
+        }
+
+        @Test
+        void close() throws IOException {
+            AvroRecordReader<Data> reader = new AvroRecordReader<>("/tmp/dataToRead.avro", Data.class);
+            try (Stream<Data> stream = reader.stream()) {
+                List<Data> readed = stream.toList();
+                assertEquals(3, readed.size());
+            }
+        }
+
+    }
+
+    @Nested
+    class ListTest {
+
+        record Data(String id, int value) {
+
+        }
+
+        @BeforeEach
+        public void setup() throws IOException {
+            AvroRecordWriter<Data> writer = new AvroRecordWriter<>(Data.class);
+            writer.write("/tmp/dataToRead.avro", List.of(
+                    new Data("foo", 1),
+                    new Data("bar", 2),
+                    new Data("baz", 3)));
+        }
+
+        @Test
+        void list() throws IOException {
+            AvroRecordReader<Data> reader = new AvroRecordReader<>("/tmp/dataToRead.avro", Data.class);
+            List<Data> readed = reader.toList();
+            assertEquals(new Data("foo", 1), readed.get(0));
+            assertEquals(new Data("bar", 2), readed.get(1));
+            assertEquals(new Data("baz", 3), readed.get(2));
+        }
+
+        @Test
+        void emptyList() throws IOException {
+            AvroRecordWriter<Data> writer = new AvroRecordWriter<>(Data.class);
+            writer.write("/tmp/dataToRead.avro", List.of());
+            AvroRecordReader<Data> reader = new AvroRecordReader<>("/tmp/dataToRead.avro", Data.class);
+            List<Data> readed = reader.toList();
+            assertTrue(readed.isEmpty());
+        }
+
     }
 
     private class AvroTest {

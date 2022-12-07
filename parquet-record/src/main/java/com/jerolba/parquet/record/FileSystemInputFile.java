@@ -20,30 +20,56 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
+import org.apache.parquet.hadoop.util.HadoopInputFile;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
 
-/*
- * Parquet InputFile implementation for a traditional File System input.
- * Some code is inspired from:
- * https://github.com/benwatson528/intellij-avro-parquet-plugin/blob/master/src/main/java/uk/co \
- * /hadoopathome/intellij/viewer/fileformat/LocalInputFile.java
- * https://github.com/tideworks/arvo2parquet/blob/master/src/main/java/com/tideworks/data_load/io/InputFile.java
+/**
  *
+ * In comparison to the default implementation provided by Apache Parquet
+ * {@link HadoopInputFile}, this implementation is specific to reading Parquet
+ * files from the file system, whereas Apache Parquet provides a more generic
+ * implementation that allows reading Parquet files from any data source, not
+ * just the file system.
+ *
+ * Some code is inspired from:
+ * https://github.com/benwatson528/intellij-avro-parquet-plugin/blob/master/src/main/java/uk/co
+ * \ /hadoopathome/intellij/viewer/fileformat/LocalInputFile.java
+ * https://github.com/tideworks/arvo2parquet/blob/master/src/main/java/com/tideworks/data_load/io/InputFile.java
  */
 public class FileSystemInputFile implements InputFile {
 
     private final File file;
 
+    /**
+     *
+     * Constructs a FileSystemInputFile with the specified file.
+     *
+     * @param file the file to read from
+     */
     public FileSystemInputFile(File file) {
         this.file = file;
     }
 
+    /**
+     *
+     * Returns the length of the file.
+     *
+     * @return the length of the file
+     * @throws IOException if an error occurs while getting the length of the file
+     */
     @Override
     public long getLength() throws IOException {
         return file.length();
     }
 
+    /**
+     * 
+     * Creates a new stream for reading from the file.
+     * 
+     * @return a new SeekableInputStream for reading from the file
+     * @throws IOException if an error occurs while creating the stream
+     */
     @Override
     public SeekableInputStream newStream() throws IOException {
         return new SeekableFileInputStream(file);
