@@ -67,11 +67,11 @@ public class ParquetRecordWriter<T> {
     }
 
     /**
-     * 
+     *
      * Writes the specified stream of Java objects to a Parquet file.
-     * 
+     *
      * @param stream the stream of objects to write
-     * 
+     *
      * @throws IOException if an error occurs while writing the records
      */
     public void write(Stream<T> stream) throws IOException {

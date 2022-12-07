@@ -79,9 +79,9 @@ public class OutputStreamOutputFile implements OutputFile {
     }
 
     /**
-     * 
+     *
      * Returns 0 to indicate that this implementation does not support block sizes.
-     * 
+     *
      * @return 0
      */
     @Override

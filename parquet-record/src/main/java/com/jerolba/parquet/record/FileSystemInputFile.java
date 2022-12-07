@@ -64,9 +64,9 @@ public class FileSystemInputFile implements InputFile {
     }
 
     /**
-     * 
+     *
      * Creates a new stream for reading from the file.
-     * 
+     *
      * @return a new SeekableInputStream for reading from the file
      * @throws IOException if an error occurs while creating the stream
      */
