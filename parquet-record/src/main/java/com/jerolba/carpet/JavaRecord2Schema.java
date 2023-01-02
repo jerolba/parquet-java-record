@@ -1,13 +1,15 @@
-package com.jerolba.tarima;
+package com.jerolba.carpet;
 
-import static com.jerolba.tarima.AliasField.getFieldName;
-import static com.jerolba.tarima.NotNullField.isNotNull;
+import static com.jerolba.carpet.AliasField.getFieldName;
+import static com.jerolba.carpet.NotNullField.isNotNull;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.enumType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.stringType;
 import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BINARY;
 import static org.apache.parquet.schema.Type.Repetition.OPTIONAL;
 import static org.apache.parquet.schema.Type.Repetition.REQUIRED;
 
+import java.lang.reflect.RecordComponent;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -54,16 +56,21 @@ public class JavaRecord2Schema {
             } else if (type.getName().equals("java.lang.String")) {
                 fields.add(Types.primitive(BINARY, repetition).as(stringType()).named(fieldName));
             } else if (type.isRecord()) {
-                List<Type> childFields = buildComposisteChild(type, visited);
+                List<Type> childFields = buildComposisteChild(attr, type, visited);
                 fields.add(new GroupType(repetition, fieldName, childFields));
             } else if (type.isEnum()) {
                 fields.add(Types.primitive(BINARY, repetition).as(enumType()).named(fieldName));
+            } else {
+                java.lang.reflect.Type genericType = attr.getGenericType();
+                if (genericType instanceof TypeVariable<?>) {
+                    throw new RecordTypeConversionException(genericType.toString() + " generic types not supported");
+                }
             }
         }
         return fields;
     }
 
-    private List<Type> buildComposisteChild(Class<?> recordClass, Set<Class<?>> visited) {
+    private List<Type> buildComposisteChild(RecordComponent attr, Class<?> recordClass, Set<Class<?>> visited) {
         validateNotVisitedRecord(recordClass, visited);
         List<Type> fields = createGroupFields(recordClass, visited);
         visited.remove(recordClass);

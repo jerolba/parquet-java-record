@@ -13,14 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jerolba.tarima;
+package com.jerolba.carpet;
 
-public class RecordTypeConversionException extends RuntimeException {
+import java.lang.annotation.Annotation;
+import java.lang.reflect.RecordComponent;
 
-    private static final long serialVersionUID = -7642331989854617064L;
+class NotNullField {
 
-    public RecordTypeConversionException(String message) {
-        super(message);
+    static boolean isNotNull(RecordComponent recordComponent) {
+        Annotation[] annotations = recordComponent.getDeclaredAnnotations();
+        for (Annotation annotation : annotations) {
+            var type = annotation.annotationType();
+            String name = type.getSimpleName().toLowerCase();
+            if (name.equals("nonnull") || name.equals("notnull")) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

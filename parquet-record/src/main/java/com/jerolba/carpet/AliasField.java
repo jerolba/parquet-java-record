@@ -13,23 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jerolba.tarima;
+package com.jerolba.carpet;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.RecordComponent;
 
-class NotNullField {
+import com.jerolba.record.annotation.Alias;
 
-    static boolean isNotNull(RecordComponent recordComponent) {
-        Annotation[] annotations = recordComponent.getDeclaredAnnotations();
-        for (Annotation annotation : annotations) {
-            var type = annotation.annotationType();
-            String name = type.getSimpleName().toLowerCase();
-            if (name.equals("nonnull") || name.equals("notnull")) {
-                return true;
-            }
+class AliasField {
+
+    static String getFieldName(RecordComponent recordComponent) {
+        Alias annotation = recordComponent.getAnnotation(Alias.class);
+        if (annotation == null) {
+            return recordComponent.getName();
         }
-        return false;
+        return annotation.value();
     }
 
 }

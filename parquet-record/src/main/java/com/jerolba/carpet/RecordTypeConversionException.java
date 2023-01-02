@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jerolba.tarima;
+package com.jerolba.carpet;
 
-import java.lang.reflect.RecordComponent;
+public class RecordTypeConversionException extends RuntimeException {
 
-import com.jerolba.record.annotation.Alias;
+    private static final long serialVersionUID = -7642331989854617064L;
 
-class AliasField {
-
-    static String getFieldName(RecordComponent recordComponent) {
-        Alias annotation = recordComponent.getAnnotation(Alias.class);
-        if (annotation == null) {
-            return recordComponent.getName();
-        }
-        return annotation.value();
+    public RecordTypeConversionException(String message) {
+        super(message);
     }
 
 }

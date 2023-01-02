@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jerolba.tarima;
+package com.jerolba.carpet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 import com.jerolba.parquet.record.OutputStreamOutputFile;
 import com.jerolba.parquet.record.ParquetRecordReader;
 
-public class TarimaWriterTest {
+public class CarpetWriterTest {
 
     public record SimpleType(String name,
             int intPrimitive, Integer intObject, short a, Byte b) {
@@ -101,12 +101,14 @@ public class TarimaWriterTest {
 
         @Test
         void withEnums() throws IOException {
-            var rec = new WithEnum("Apple", OrgType.FOO);
+            var rec1 = new WithEnum("Apple", OrgType.FOO);
+            var rec2 = new WithEnum("Google", null);
             var writerTest = new ParquetWriterTest<>("/tmp/withEnum.parquet", WithEnum.class);
-            writerTest.write(rec);
+            writerTest.write(rec1, rec2);
 
-            WithEnum value = writerTest.getReadIterator().next();
-            assertEquals(rec, value);
+            var it = writerTest.getReadIterator();
+            assertEquals(rec1, it.next());
+            assertEquals(rec2, it.next());
         }
 
     }
@@ -150,8 +152,8 @@ public class TarimaWriterTest {
         void genericCompositeNotSupported() throws IOException {
             OutputStreamOutputFile output = new OutputStreamOutputFile(
                     new FileOutputStream("/tmp/notsupported.parquet"));
-            assertThrows(RuntimeException.class, () -> {
-                try (var writer = TarimaWriter.builder(output, CompositeGeneric.class).build()) {
+            assertThrows(RecordTypeConversionException.class, () -> {
+                try (var writer = CarpetWriter.builder(output, CompositeGeneric.class).build()) {
                 }
             });
         }
@@ -170,7 +172,7 @@ public class TarimaWriterTest {
             OutputStreamOutputFile output = new OutputStreamOutputFile(
                     new FileOutputStream("/tmp/notsupported.parquet"));
             assertThrows(RuntimeException.class, () -> {
-                try (ParquetWriter<RecursiveLoop> writer = TarimaWriter.builder(output, RecursiveLoop.class)
+                try (ParquetWriter<RecursiveLoop> writer = CarpetWriter.builder(output, RecursiveLoop.class)
                         .build()) {
                 }
             });
@@ -191,7 +193,7 @@ public class TarimaWriterTest {
 
         public void write(T... values) throws IOException {
             OutputStreamOutputFile output = new OutputStreamOutputFile(new FileOutputStream(path));
-            try (ParquetWriter<T> writer = TarimaWriter.builder(output, type).build()) {
+            try (ParquetWriter<T> writer = CarpetWriter.builder(output, type).build()) {
                 for (var v : values) {
                     writer.write(v);
                 }

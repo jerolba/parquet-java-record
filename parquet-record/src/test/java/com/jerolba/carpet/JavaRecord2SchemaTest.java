@@ -1,4 +1,4 @@
-package com.jerolba.tarima;
+package com.jerolba.carpet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -7,6 +7,8 @@ import org.apache.parquet.schema.MessageType;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.jerolba.carpet.JavaRecord2Schema;
+import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.record.annotation.Alias;
 import com.jerolba.record.annotation.NotNull;
 
@@ -163,6 +165,14 @@ class JavaRecord2SchemaTest {
         @Test
         void transitiveRecursivityIsNotAllowed() {
             assertThrows(RecordTypeConversionException.class, () -> schemaFactory.createSchema(Recursive.class));
+        }
+
+        public record WithGeneric<T>(String name, T child) {
+        }
+
+        @Test
+        void genericAreNotAllowed() {
+            assertThrows(RecordTypeConversionException.class, () -> schemaFactory.createSchema(WithGeneric.class));
         }
 
     }

@@ -1,4 +1,4 @@
-package com.jerolba.tarima;
+package com.jerolba.carpet;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,7 +10,7 @@ import org.apache.parquet.io.OutputFile;
 import org.apache.parquet.io.api.RecordConsumer;
 import org.apache.parquet.schema.MessageType;
 
-public class TarimaWriter<T> {
+public class CarpetWriter<T> {
 
     public static <T> Builder<T> builder(OutputFile file, Class<T> recordClass) {
         return new Builder<>(file, recordClass);
@@ -46,7 +46,7 @@ public class TarimaWriter<T> {
 
         private final Class<T> recordClass;
         private final Map<String, String> extraMetaData;
-        private TarimaRecordWriter<T> tarimaWriter;
+        private CarpetMessageWriter<T> tarimaWriter;
 
         public TarimaWriterSupport(Class<T> recordClass, Map<String, String> extraMetaData) {
             this.recordClass = recordClass;
@@ -68,7 +68,7 @@ public class TarimaWriter<T> {
         @Override
         public void prepareForWrite(RecordConsumer recordConsumer) {
             try {
-                tarimaWriter = new TarimaRecordWriter<>(recordConsumer, recordClass);
+                tarimaWriter = new CarpetMessageWriter<>(recordConsumer, recordClass);
             } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
