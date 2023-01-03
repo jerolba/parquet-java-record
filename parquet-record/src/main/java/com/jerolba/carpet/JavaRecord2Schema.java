@@ -89,8 +89,8 @@ public class JavaRecord2Schema {
             RecordComponent attr, Repetition repetition) {
         return switch (carpetConfiguration.annotatedLevels()) {
         case ONE -> createCollectionOneLevel(fieldName, collectionClass, visited, attr);
-        case TWO -> createCollectionTwoLevel(fieldName, collectionClass, visited, attr, repetition);
-        case THREE -> createCollectionThreeLevel(fieldName, collectionClass, visited);
+        case TWO -> createCollectionTwoLevel(fieldName, collectionClass, visited, repetition);
+        case THREE -> createCollectionThreeLevel(fieldName, collectionClass, visited, repetition);
         };
     }
 
@@ -120,7 +120,7 @@ public class JavaRecord2Schema {
     }
 
     private Type createCollectionTwoLevel(String fieldName, ParametizedObject parametized, Set<Class<?>> visited,
-            RecordComponent attr, Repetition repetition) {
+            Repetition repetition) {
 
         if (parametized.isCollection() || parametized.isMap()) {
             Type nested = createCollectionType("element", parametized.getParametizedChild(), visited, null,
@@ -148,9 +148,33 @@ public class JavaRecord2Schema {
         throw new RecordTypeConversionException("Unsuported type in collection");
     }
 
-    private Type createCollectionThreeLevel(String fieldName, ParametizedObject collectionClass,
-            Set<Class<?>> visited) {
-        return null;
+    private Type createCollectionThreeLevel(String fieldName, ParametizedObject parametized, Set<Class<?>> visited,
+            Repetition repetition) {
+
+        if (parametized.isCollection() || parametized.isMap()) {
+            Type nested = createCollectionType("element", parametized.getParametizedChild(), visited, null,
+                    Repetition.OPTIONAL);
+            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+        }
+        Class<?> type = parametized.getActualType();
+        PrimitiveTypeName primitiveType = simpleTypeItems(type);
+        if (primitiveType != null) {
+            var nested = new PrimitiveType(Repetition.OPTIONAL, primitiveType, "element");
+            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+        } else if (type.getName().equals("java.lang.String")) {
+            var nested = Types.primitive(BINARY, Repetition.OPTIONAL).as(stringType()).named("element");
+            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+        } else if (type.isRecord()) {
+            List<Type> childFields = buildCompositeChild(type, visited);
+            var nested = new GroupType(Repetition.OPTIONAL, "element", childFields);
+            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+        } else if (type.isEnum()) {
+            var nested = Types.primitive(BINARY, Repetition.OPTIONAL).as(enumType()).named("element");
+            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+        } else {
+            // Generic types in first child are detected
+        }
+        throw new RecordTypeConversionException("Unsuported type in collection");
     }
 
     private PrimitiveTypeName simpleTypeItems(Class<?> type) {
@@ -188,11 +212,9 @@ public class JavaRecord2Schema {
 
     private static class ParametizedObject {
 
-        private final ParameterizedType type;
         private final java.lang.reflect.Type collectionType;
 
         public ParametizedObject(ParameterizedType type) {
-            this.type = type;
             this.collectionType = type.getActualTypeArguments()[0];
         }
 

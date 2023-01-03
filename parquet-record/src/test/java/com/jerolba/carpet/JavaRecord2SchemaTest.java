@@ -445,4 +445,200 @@ class JavaRecord2SchemaTest {
         }
 
     }
+
+    @Nested
+    class NestedCollection3Level {
+
+        private final CarpetConfiguration threeLevel = new CarpetConfiguration(AnnotatedLevels.THREE);
+        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(threeLevel);
+
+        @Test
+        void nestedSimpleTypeCollection() {
+            record SimpleTypeCollection(String id, List<Integer> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(SimpleTypeCollection.class);
+            String expected = """
+                    message SimpleTypeCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group list {
+                          optional int32 element;
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void nestedRecordCollection() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record NestedRecordCollection(String id, List<ChildRecord> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(NestedRecordCollection.class);
+            String expected = """
+                    message NestedRecordCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group list {
+                          optional group element {
+                            optional binary id (STRING);
+                            optional boolean loaded;
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveNestedRecordCollection() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record ConsecutiveNestedRecordCollection(String id, List<List<ChildRecord>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveNestedRecordCollection.class);
+            String expected = """
+                    message ConsecutiveNestedRecordCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group list {
+                          optional group element (LIST) {
+                            repeated group list {
+                              optional group element {
+                                optional binary id (STRING);
+                                optional boolean loaded;
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveTripleNestedRecordCollection() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record ConsecutiveTripleNestedRecordCollection(String id, List<List<List<ChildRecord>>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveTripleNestedRecordCollection.class);
+            String expected = """
+                    message ConsecutiveTripleNestedRecordCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group list {
+                          optional group element (LIST) {
+                            repeated group list {
+                              optional group element (LIST) {
+                                repeated group list {
+                                  optional group element {
+                                    optional binary id (STRING);
+                                    optional boolean loaded;
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveNestedSimpleTypeCollections() {
+            record ConsecutiveNestedCollection(String id, List<List<Integer>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveNestedCollection.class);
+            String expected = """
+                    message ConsecutiveNestedCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group list {
+                          optional group element (LIST) {
+                            repeated group list {
+                              optional int32 element;
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveTripleNestedSimpleTypeCollections() {
+            record ConsecutiveTripleNestedCollection(String id, List<List<List<Integer>>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveTripleNestedCollection.class);
+            String expected = """
+                    message ConsecutiveTripleNestedCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group list {
+                          optional group element (LIST) {
+                            repeated group list {
+                              optional group element (LIST) {
+                                repeated group list {
+                                  optional int32 element;
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void nonConsecutiveNestedCollections() {
+            record ChildCollection(String name, List<String> alias) {
+
+            }
+            record NonConsecutiveNestedCollection(String id, List<ChildCollection> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(NonConsecutiveNestedCollection.class);
+            String expected = """
+                    message NonConsecutiveNestedCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group list {
+                          optional group element {
+                            optional binary name (STRING);
+                            optional group alias (LIST) {
+                              repeated group list {
+                                optional binary element (STRING);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+    }
 }
