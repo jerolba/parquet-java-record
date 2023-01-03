@@ -8,10 +8,11 @@ public class CarpetMessageWriter<T> {
     private final Class<T> recordClass;
     private final CarpetRecordWriter writer;
 
-    public CarpetMessageWriter(RecordConsumer recordConsumer, Class<T> recordClass) throws Throwable {
+    public CarpetMessageWriter(RecordConsumer recordConsumer, Class<T> recordClass,
+            CarpetConfiguration carpetConfiguration) throws Throwable {
         this.recordConsumer = recordConsumer;
         this.recordClass = recordClass;
-        this.writer = new CarpetRecordWriter(recordConsumer, recordClass);
+        this.writer = new CarpetRecordWriter(recordConsumer, recordClass, carpetConfiguration);
     }
 
     public void write(T record) {

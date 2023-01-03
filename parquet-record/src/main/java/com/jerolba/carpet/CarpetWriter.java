@@ -20,6 +20,7 @@ public class CarpetWriter<T> {
 
         private final Class<T> recordClass;
         private Map<String, String> extraMetaData = new HashMap<>();
+        private AnnotatedLevels annotatedLevels = AnnotatedLevels.THREE;
 
         private Builder(OutputFile file, Class<T> recordClass) {
             super(file);
@@ -36,21 +37,31 @@ public class CarpetWriter<T> {
             return this;
         }
 
+        public Builder<T> levelStructure(AnnotatedLevels annotatedLevels) {
+            this.annotatedLevels = annotatedLevels;
+            return self();
+        }
+
         @Override
         protected WriteSupport<T> getWriteSupport(Configuration conf) {
-            return new TarimaWriterSupport<>(recordClass, extraMetaData);
+            CarpetConfiguration carpetCfg = new CarpetConfiguration(annotatedLevels);
+            return new TarimaWriterSupport<>(recordClass, extraMetaData, carpetCfg);
         }
+
     }
 
     private static class TarimaWriterSupport<T> extends WriteSupport<T> {
 
         private final Class<T> recordClass;
         private final Map<String, String> extraMetaData;
+        private final CarpetConfiguration carpetConfiguration;
         private CarpetMessageWriter<T> tarimaWriter;
 
-        public TarimaWriterSupport(Class<T> recordClass, Map<String, String> extraMetaData) {
+        public TarimaWriterSupport(Class<T> recordClass, Map<String, String> extraMetaData,
+                CarpetConfiguration carpetConfiguration) {
             this.recordClass = recordClass;
             this.extraMetaData = extraMetaData;
+            this.carpetConfiguration = carpetConfiguration;
         }
 
         @Override
@@ -60,7 +71,7 @@ public class CarpetWriter<T> {
 
         @Override
         public WriteContext init(Configuration configuration) {
-            JavaRecord2Schema javaRecord2Schema = new JavaRecord2Schema();
+            JavaRecord2Schema javaRecord2Schema = new JavaRecord2Schema(carpetConfiguration);
             MessageType schema = javaRecord2Schema.createSchema(recordClass);
             return new WriteContext(schema, this.extraMetaData);
         }
@@ -68,7 +79,7 @@ public class CarpetWriter<T> {
         @Override
         public void prepareForWrite(RecordConsumer recordConsumer) {
             try {
-                tarimaWriter = new CarpetMessageWriter<>(recordConsumer, recordClass);
+                tarimaWriter = new CarpetMessageWriter<>(recordConsumer, recordClass, carpetConfiguration);
             } catch (Throwable e) {
                 throw new RuntimeException(e);
             }

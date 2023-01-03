@@ -19,12 +19,15 @@ public class CarpetRecordWriter {
 
     private final RecordConsumer recordConsumer;
     private final Class<?> recordClass;
+    private final CarpetConfiguration carpetConfiguration;
 
     private final List<FieldWriter> writers = new ArrayList<>();
 
-    public CarpetRecordWriter(RecordConsumer recordConsumer, Class<?> recordClass) throws Throwable {
+    public CarpetRecordWriter(RecordConsumer recordConsumer, Class<?> recordClass,
+            CarpetConfiguration carpetConfiguration) throws Throwable {
         this.recordConsumer = recordConsumer;
         this.recordClass = recordClass;
+        this.carpetConfiguration = carpetConfiguration;
 
         // Preconditions: All fields are writable
         int idx = 0;
@@ -54,7 +57,7 @@ public class CarpetRecordWriter {
             } else if (type.isEnum()) {
                 writer = new EnumFieldWriter(f, type);
             } else if (type.isRecord()) {
-                var recordWriter = new CarpetRecordWriter(recordConsumer, type);
+                var recordWriter = new CarpetRecordWriter(recordConsumer, type, carpetConfiguration);
                 writer = new RecordFieldWriter(f, recordWriter);
             }
             writers.add(writer);

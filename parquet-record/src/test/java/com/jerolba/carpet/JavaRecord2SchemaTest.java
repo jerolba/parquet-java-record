@@ -3,23 +3,25 @@ package com.jerolba.carpet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
+
 import org.apache.parquet.schema.MessageType;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.jerolba.carpet.JavaRecord2Schema;
-import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.record.annotation.Alias;
 import com.jerolba.record.annotation.NotNull;
 
 class JavaRecord2SchemaTest {
 
-    public record SimpleRecord(long id, String name) {
-    }
+    private final CarpetConfiguration default3Levels = new CarpetConfiguration(AnnotatedLevels.THREE);
 
     @Test
     void simpleRecordTest() {
-        MessageType schema = new JavaRecord2Schema().createSchema(SimpleRecord.class);
+        record SimpleRecord(long id, String name) {
+        }
+
+        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(SimpleRecord.class);
         String expected = """
                 message SimpleRecord {
                   required int64 id;
@@ -29,13 +31,13 @@ class JavaRecord2SchemaTest {
         assertEquals(expected, schema.toString());
     }
 
-    public record PrimitiveTypesRecord(long longValue, int intValue, float floatValue, double doubleValue,
-            short shortValue, byte byteValue, boolean booleanValue) {
-    }
-
     @Test
     void privitiveTypesRecordTest() {
-        MessageType schema = new JavaRecord2Schema().createSchema(PrimitiveTypesRecord.class);
+        record PrimitiveTypesRecord(long longValue, int intValue, float floatValue, double doubleValue,
+                short shortValue, byte byteValue, boolean booleanValue) {
+        }
+
+        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(PrimitiveTypesRecord.class);
         String expected = """
                 message PrimitiveTypesRecord {
                   required int64 longValue;
@@ -50,13 +52,13 @@ class JavaRecord2SchemaTest {
         assertEquals(expected, schema.toString());
     }
 
-    public record PrimitiveObjectsTypesRecord(Long longValue, Integer intValue, Float floatValue, Double doubleValue,
-            Short shortValue, Byte byteValue, Boolean booleanValue) {
-    }
-
     @Test
     void privitiveObjectsTypesRecordTest() {
-        MessageType schema = new JavaRecord2Schema().createSchema(PrimitiveObjectsTypesRecord.class);
+        record PrimitiveObjectsTypesRecord(Long longValue, Integer intValue, Float floatValue, Double doubleValue,
+                Short shortValue, Byte byteValue, Boolean booleanValue) {
+        }
+
+        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(PrimitiveObjectsTypesRecord.class);
         String expected = """
                 message PrimitiveObjectsTypesRecord {
                   optional int64 longValue;
@@ -71,12 +73,12 @@ class JavaRecord2SchemaTest {
         assertEquals(expected, schema.toString());
     }
 
-    public record FieldAliasRecord(long id, @Alias("nombre") String name) {
-    }
-
     @Test
     void fieldAliasRecordTest() {
-        MessageType schema = new JavaRecord2Schema().createSchema(FieldAliasRecord.class);
+        record FieldAliasRecord(long id, @Alias("nombre") String name) {
+        }
+
+        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(FieldAliasRecord.class);
         String expected = """
                 message FieldAliasRecord {
                   required int64 id;
@@ -86,12 +88,12 @@ class JavaRecord2SchemaTest {
         assertEquals(expected, schema.toString());
     }
 
-    public record NotNullFieldRecord(@NotNull Long id, @NotNull String name) {
-    }
-
     @Test
     void notNullFieldRecordTest() {
-        MessageType schema = new JavaRecord2Schema().createSchema(NotNullFieldRecord.class);
+        record NotNullFieldRecord(@NotNull Long id, @NotNull String name) {
+        }
+
+        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(NotNullFieldRecord.class);
         String expected = """
                 message NotNullFieldRecord {
                   required int64 id;
@@ -104,17 +106,15 @@ class JavaRecord2SchemaTest {
     @Nested
     class SimpleComposition {
 
-        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema();
-
-        public record ParentRecord(long id, String name, ChildRecord foo) {
-        }
-
-        public record ChildRecord(String key, int value) {
-
-        }
+        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(default3Levels);
 
         @Test
         void simpleParentChildRecordTest() {
+            record ChildRecord(String key, int value) {
+            }
+            record ParentRecord(long id, String name, ChildRecord foo) {
+            }
+
             MessageType schema = schemaFactory.createSchema(ParentRecord.class);
             String expected = """
                     message ParentRecord {
@@ -129,11 +129,13 @@ class JavaRecord2SchemaTest {
             assertEquals(expected, schema.toString());
         }
 
-        public record NotNullChildRecord(long id, String name, @NotNull @Alias("bar") ChildRecord foo) {
-        }
-
         @Test
         void notNullChildRecordTest() {
+            record ChildRecord(String key, int value) {
+            }
+            record NotNullChildRecord(long id, String name, @NotNull @Alias("bar") ChildRecord foo) {
+            }
+
             MessageType schema = schemaFactory.createSchema(NotNullChildRecord.class);
             String expected = """
                     message NotNullChildRecord {
@@ -148,30 +150,33 @@ class JavaRecord2SchemaTest {
             assertEquals(expected, schema.toString());
         }
 
-        public record Recursive(long id, String name, Recursive child) {
-        }
-
         @Test
         void recursivityIsNotAllowed() {
-            assertThrows(RecordTypeConversionException.class, () -> schemaFactory.createSchema(Recursive.class));
-        }
+            record Recursive(long id, String name, Recursive child) {
+            }
 
-        public record RecursiveTransitive(long id, String name, RecursiveChild child) {
+            assertThrows(RecordTypeConversionException.class, () -> schemaFactory.createSchema(Recursive.class));
         }
 
         public record RecursiveChild(String name, RecursiveTransitive child) {
         }
 
-        @Test
-        void transitiveRecursivityIsNotAllowed() {
-            assertThrows(RecordTypeConversionException.class, () -> schemaFactory.createSchema(Recursive.class));
+        public record RecursiveTransitive(long id, String name, RecursiveChild child) {
         }
 
-        public record WithGeneric<T>(String name, T child) {
+        @Test
+        void transitiveRecursivityIsNotAllowed() {
+            record Recursive(long id, String name, Recursive child) {
+            }
+
+            assertThrows(RecordTypeConversionException.class, () -> schemaFactory.createSchema(Recursive.class));
         }
 
         @Test
         void genericAreNotAllowed() {
+            record WithGeneric<T>(String name, T child) {
+            }
+
             assertThrows(RecordTypeConversionException.class, () -> schemaFactory.createSchema(WithGeneric.class));
         }
 
@@ -180,18 +185,17 @@ class JavaRecord2SchemaTest {
     @Nested
     class EnumTypes {
 
-        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema();
+        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(default3Levels);
 
         enum Status {
             ACTIVE, INACTIVE, DELETED
         }
 
-        public record WithEnum(long id, String name, Status status) {
-
-        }
-
         @Test
         void withEnum() {
+            record WithEnum(long id, String name, Status status) {
+            }
+
             MessageType schema = schemaFactory.createSchema(WithEnum.class);
             String expected = """
                     message WithEnum {
@@ -203,18 +207,238 @@ class JavaRecord2SchemaTest {
             assertEquals(expected, schema.toString());
         }
 
-        public record WithNotNullEnum(long id, String name, @NotNull @Alias("state") Status status) {
-
-        }
-
         @Test
         void withNotNullEnum() {
+            record WithNotNullEnum(long id, String name, @NotNull @Alias("state") Status status) {
+            }
+
             MessageType schema = schemaFactory.createSchema(WithNotNullEnum.class);
             String expected = """
                     message WithNotNullEnum {
                       required int64 id;
                       optional binary name (STRING);
                       required binary state (ENUM);
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+    }
+
+    @Nested
+    class NestedCollection1Level {
+
+        private final CarpetConfiguration oneLevel = new CarpetConfiguration(AnnotatedLevels.ONE);
+        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(oneLevel);
+
+        @Test
+        void nestedSimpleTypeCollection() {
+            record SimpleTypeCollection(String id, List<Integer> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(SimpleTypeCollection.class);
+            String expected = """
+                    message SimpleTypeCollection {
+                      optional binary id (STRING);
+                      repeated int32 values;
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveNestedCollections() {
+            record ConsecutiveNestedCollection(String id, List<List<Integer>> values) {
+            }
+
+            assertThrows(RecordTypeConversionException.class,
+                    () -> schemaFactory.createSchema(ConsecutiveNestedCollection.class));
+        }
+
+        @Test
+        void nonConsecutiveNestedCollections() {
+            record ChildCollection(String name, List<String> alias) {
+
+            }
+            record NonConsecutiveNestedCollection(String id, List<ChildCollection> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(NonConsecutiveNestedCollection.class);
+            String expected = """
+                    message NonConsecutiveNestedCollection {
+                      optional binary id (STRING);
+                      repeated group values {
+                        optional binary name (STRING);
+                        repeated binary alias (STRING);
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+    }
+
+    @Nested
+    class NestedCollection2Level {
+
+        private final CarpetConfiguration twoLevel = new CarpetConfiguration(AnnotatedLevels.TWO);
+        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(twoLevel);
+
+        @Test
+        void nestedSimpleTypeCollection() {
+            record SimpleTypeCollection(String id, List<Integer> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(SimpleTypeCollection.class);
+            String expected = """
+                    message SimpleTypeCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated int32 element;
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void nestedRecordCollection() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record NestedRecordCollection(String id, List<ChildRecord> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(NestedRecordCollection.class);
+            String expected = """
+                    message NestedRecordCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group element {
+                          optional binary id (STRING);
+                          optional boolean loaded;
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveNestedRecordCollection() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record ConsecutiveNestedRecordCollection(String id, List<List<ChildRecord>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveNestedRecordCollection.class);
+            String expected = """
+                    message ConsecutiveNestedRecordCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group element (LIST) {
+                          repeated group element {
+                            optional binary id (STRING);
+                            optional boolean loaded;
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveTripleNestedRecordCollection() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record ConsecutiveTripleNestedRecordCollection(String id, List<List<List<ChildRecord>>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveTripleNestedRecordCollection.class);
+            String expected = """
+                    message ConsecutiveTripleNestedRecordCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group element (LIST) {
+                          repeated group element (LIST) {
+                            repeated group element {
+                              optional binary id (STRING);
+                              optional boolean loaded;
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveNestedSimpleTypeCollections() {
+            record ConsecutiveNestedCollection(String id, List<List<Integer>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveNestedCollection.class);
+            String expected = """
+                    message ConsecutiveNestedCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group element (LIST) {
+                          repeated int32 element;
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveTripleNestedSimpleTypeCollections() {
+            record ConsecutiveTripleNestedCollection(String id, List<List<List<Integer>>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveTripleNestedCollection.class);
+            String expected = """
+                    message ConsecutiveTripleNestedCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group element (LIST) {
+                          repeated group element (LIST) {
+                            repeated int32 element;
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void nonConsecutiveNestedCollections() {
+            record ChildCollection(String name, List<String> alias) {
+
+            }
+            record NonConsecutiveNestedCollection(String id, List<ChildCollection> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(NonConsecutiveNestedCollection.class);
+            String expected = """
+                    message NonConsecutiveNestedCollection {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group element {
+                          optional binary name (STRING);
+                          optional group alias (LIST) {
+                            repeated binary element (STRING);
+                          }
+                        }
+                      }
                     }
                     """;
             assertEquals(expected, schema.toString());

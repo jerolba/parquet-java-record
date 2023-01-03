@@ -34,8 +34,7 @@ import com.jerolba.parquet.record.ParquetRecordReader;
 
 public class CarpetWriterTest {
 
-    public record SimpleType(String name,
-            int intPrimitive, Integer intObject, short a, Byte b) {
+    public record SimpleType(String name, int intPrimitive, Integer intObject, short a, Byte b) {
     }
 
     @Test
@@ -150,8 +149,7 @@ public class CarpetWriterTest {
 
         @Test
         void genericCompositeNotSupported() throws IOException {
-            OutputStreamOutputFile output = new OutputStreamOutputFile(
-                    new FileOutputStream("/tmp/notsupported.parquet"));
+            var output = new OutputStreamOutputFile(new FileOutputStream("/tmp/notsupported.parquet"));
             assertThrows(RecordTypeConversionException.class, () -> {
                 try (var writer = CarpetWriter.builder(output, CompositeGeneric.class).build()) {
                 }
@@ -169,13 +167,35 @@ public class CarpetWriterTest {
 
         @Test
         void recursiveCompositeNotSupported() throws IOException {
-            OutputStreamOutputFile output = new OutputStreamOutputFile(
-                    new FileOutputStream("/tmp/notsupported.parquet"));
+            var output = new OutputStreamOutputFile(new FileOutputStream("/tmp/notsupported.parquet"));
             assertThrows(RuntimeException.class, () -> {
                 try (ParquetWriter<RecursiveLoop> writer = CarpetWriter.builder(output, RecursiveLoop.class)
                         .build()) {
                 }
             });
+        }
+
+        public record FirstLevel(String id, SecondLevel child) {
+
+        }
+
+        public record SecondLevel(String name, ThirdLevel child) {
+
+        }
+
+        public record ThirdLevel(String name, long value) {
+
+        }
+
+        @Test
+        void multipleLevelComposition() throws IOException {
+            FirstLevel rec = new FirstLevel("Amazon", new SecondLevel("Spain", new ThirdLevel("Aragón", 201020)));
+
+            var writerTest = new ParquetWriterTest<>("/tmp/multipleLevel.parquet", FirstLevel.class);
+            writerTest.write(rec);
+
+            FirstLevel value = writerTest.getReadIterator().next();
+            assertEquals(rec, value);
         }
 
     }
