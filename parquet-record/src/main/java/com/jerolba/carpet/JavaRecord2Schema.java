@@ -2,13 +2,13 @@ package com.jerolba.carpet;
 
 import static com.jerolba.carpet.AliasField.getFieldName;
 import static com.jerolba.carpet.NotNullField.isNotNull;
+import static com.jerolba.carpet.ParametizedObject.getCollectionClass;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.enumType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.stringType;
 import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BINARY;
 import static org.apache.parquet.schema.Type.Repetition.OPTIONAL;
 import static org.apache.parquet.schema.Type.Repetition.REQUIRED;
 
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
@@ -199,57 +199,4 @@ public class JavaRecord2Schema {
         visited.add(recordClass);
     }
 
-    private ParametizedObject getCollectionClass(RecordComponent attr) {
-        java.lang.reflect.Type genericType = attr.getGenericType();
-        if (genericType instanceof TypeVariable<?>) {
-            throw new RecordTypeConversionException(genericType.toString() + " generic types not supported");
-        }
-        if (genericType instanceof ParameterizedType paramType) {
-            return new ParametizedObject(paramType);
-        }
-        throw new RecordTypeConversionException("Unsuported type in collection ");
-    }
-
-    private static class ParametizedObject {
-
-        private final java.lang.reflect.Type collectionType;
-
-        public ParametizedObject(ParameterizedType type) {
-            this.collectionType = type.getActualTypeArguments()[0];
-        }
-
-        public Class<?> getActualType() {
-            if ((collectionType instanceof Class<?> finalType)) {
-                return finalType;
-            }
-            throw new RecordTypeConversionException("Invalid type in collection " + collectionType);
-        }
-
-        public boolean isCollection() {
-            if (collectionType instanceof ParameterizedType paramType) {
-                java.lang.reflect.Type collectionActualType = paramType.getRawType();
-                if ((collectionActualType instanceof Class<?> finalType)) {
-                    if (Collection.class.isAssignableFrom(finalType)) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                } else {
-                    return false;
-                }
-            }
-            return false;
-        }
-
-        public ParametizedObject getParametizedChild() {
-            if (collectionType instanceof ParameterizedType paramType) {
-                return new ParametizedObject(paramType);
-            }
-            return null;
-        }
-
-        public boolean isMap() {
-            return false;
-        }
-    }
 }

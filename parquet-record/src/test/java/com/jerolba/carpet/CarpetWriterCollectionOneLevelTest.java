@@ -15,6 +15,8 @@
  */
 package com.jerolba.carpet;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -30,7 +32,31 @@ import com.jerolba.parquet.record.ParquetRecordReader;
 public class CarpetWriterCollectionOneLevelTest {
 
     @Test
-    void simpleCollection() throws IOException {
+    void simpleTypeCollection() throws IOException {
+
+        record MainRecord(String name, List<Integer> ids, List<Double> amount) {
+        }
+
+        var rec1 = new MainRecord("foo", List.of(1, 2, 3), List.of(1.2, 3.2));
+        var writerTest = new ParquetWriterTest<>("/tmp/simpleCollection.parquet", MainRecord.class);
+        writerTest.write(rec1);
+    }
+
+    @Test
+    void consecutiveNestedCollectionsAreNotSupported() {
+        record ConsecutiveNestedCollection(String id, List<List<Integer>> values) {
+        }
+
+        var rec1 = new ConsecutiveNestedCollection("foo", List.of(List.of(1, 2, 3)));
+        assertThrows(RecordTypeConversionException.class, () -> {
+            var writerTest = new ParquetWriterTest<>("/tmp/consecutiveNestedCollectionsAreNotSupporteds.parquet",
+                    ConsecutiveNestedCollection.class);
+            writerTest.write(rec1);
+        });
+    }
+
+    @Test
+    void simpleCompositeCollection() throws IOException {
 
         record ChildRecord(String id, boolean active) {
 
@@ -39,10 +65,23 @@ public class CarpetWriterCollectionOneLevelTest {
         }
 
         var rec1 = new MainRecord("foo", List.of(new ChildRecord("Madrid", true), new ChildRecord("Sevilla", false)));
-        var writerTest = new ParquetWriterTest<>("/tmp/simpleCollection.parquet", MainRecord.class);
+        var writerTest = new ParquetWriterTest<>("/tmp/simpleCompositeCollection.parquet", MainRecord.class);
         writerTest.write(rec1);
-        var it = writerTest.getReadIterator();
-        System.out.println(it.next());
+    }
+
+    @Test
+    void nonConsecutiveNestedCollections() throws IOException {
+        record ChildCollection(String name, List<String> alias) {
+
+        }
+        record NonConsecutiveNestedCollection(String id, List<ChildCollection> values) {
+        }
+
+        var rec1 = new NonConsecutiveNestedCollection("foo",
+                List.of(new ChildCollection("Apple", List.of("MacOs", "OS X"))));
+        var writerTest = new ParquetWriterTest<>("/tmp/nonConsecutiveNestedCollections.parquet",
+                NonConsecutiveNestedCollection.class);
+        writerTest.write(rec1);
     }
 
     private class ParquetWriterTest<T> {

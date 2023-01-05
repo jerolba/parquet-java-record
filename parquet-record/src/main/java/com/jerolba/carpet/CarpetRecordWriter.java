@@ -1,6 +1,7 @@
 package com.jerolba.carpet;
 
 import static com.jerolba.carpet.AliasField.getFieldName;
+import static com.jerolba.carpet.ParametizedObject.getCollectionClass;
 import static java.lang.invoke.MethodType.methodType;
 
 import java.lang.invoke.CallSite;
@@ -9,7 +10,9 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import org.apache.parquet.io.api.Binary;
@@ -21,7 +24,7 @@ public class CarpetRecordWriter {
     private final Class<?> recordClass;
     private final CarpetConfiguration carpetConfiguration;
 
-    private final List<FieldWriter> writers = new ArrayList<>();
+    private final List<FieldWriter> fieldWriters = new ArrayList<>();
 
     public CarpetRecordWriter(RecordConsumer recordConsumer, Class<?> recordClass,
             CarpetConfiguration carpetConfiguration) throws Throwable {
@@ -31,43 +34,138 @@ public class CarpetRecordWriter {
 
         // Preconditions: All fields are writable
         int idx = 0;
-        for (RecordComponent recordComponent : recordClass.getRecordComponents()) {
-            String fieldName = getFieldName(recordComponent);
+        for (RecordComponent attr : recordClass.getRecordComponents()) {
+            String fieldName = getFieldName(attr);
 
-            Class<?> type = recordComponent.getType();
+            Class<?> type = attr.getType();
             String typeName = type.getName();
             FieldWriter writer = null;
-            RecordField f = new RecordField(recordClass, recordComponent, fieldName, idx);
+            RecordField f = new RecordField(recordClass, attr, fieldName, idx);
 
-            if (typeName.equals("int") || typeName.equals("java.lang.Integer")) {
-                writer = new IntegerFieldWriter(f);
-            } else if (typeName.equals("java.lang.String")) {
-                writer = new StringFieldWriter(f);
-            } else if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean")) {
-                writer = new BooleanFieldWriter(f);
-            } else if (typeName.equals("long") || typeName.equals("java.lang.Long")) {
-                writer = new LongFieldWriter(f);
-            } else if (typeName.equals("double") || typeName.equals("java.lang.Double")) {
-                writer = new DoubleFieldWriter(f);
-            } else if (typeName.equals("float") || typeName.equals("java.lang.Float")) {
-                writer = new FloatFieldWriter(f);
-            } else if (typeName.equals("short") || typeName.equals("java.lang.Short") ||
-                    typeName.equals("byte") || typeName.equals("java.lang.Byte")) {
-                writer = new IntegerCompatibleFieldWriter(f);
-            } else if (type.isEnum()) {
-                writer = new EnumFieldWriter(f, type);
-            } else if (type.isRecord()) {
-                var recordWriter = new CarpetRecordWriter(recordConsumer, type, carpetConfiguration);
-                writer = new RecordFieldWriter(f, recordWriter);
+            writer = buildBasicTypeWriter(typeName, type, f);
+
+            if (writer == null) {
+                if (type.isRecord()) {
+                    var recordWriter = new CarpetRecordWriter(recordConsumer, type, carpetConfiguration);
+                    writer = new RecordFieldWriter(f, recordWriter);
+                } else if (Collection.class.isAssignableFrom(type)) {
+                    ParametizedObject collectionClass = getCollectionClass(attr);
+                    writer = createCollectionWriter(collectionClass, f);
+                } else {
+                    System.out.println(typeName + " can not be serialized");
+                    // throw new RuntimeException(typeName + " can not be serialized");
+                }
             }
-            writers.add(writer);
+            fieldWriters.add(writer);
             idx++;
         }
     }
 
+    private FieldWriter createCollectionWriter(ParametizedObject collectionClass, RecordField f) throws Throwable {
+        return switch (carpetConfiguration.annotatedLevels()) {
+        case ONE -> createCollectionWriterOneLevel(collectionClass, f);
+        case TWO -> createCollectionWriterTwoLevel(collectionClass, f);
+        case THREE -> createCollectionWriterThreeLevel(collectionClass, f);
+        };
+    }
+
+    private FieldWriter createCollectionWriterOneLevel(ParametizedObject parametized, RecordField f) throws Throwable {
+        Class<?> type = parametized.getActualType();
+        String typeName = type.getName();
+        BiConsumer<RecordConsumer, Object> elemConsumer = null;
+        if (typeName.equals("int") || typeName.equals("java.lang.Integer")) {
+            elemConsumer = (consumer, v) -> consumer.addInteger((Integer) v);
+        } else if (typeName.equals("java.lang.String")) {
+            elemConsumer = (consumer, v) -> consumer.addBinary(Binary.fromString((String) v));
+        } else if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean")) {
+            elemConsumer = (consumer, v) -> consumer.addBoolean((Boolean) v);
+        } else if (typeName.equals("long") || typeName.equals("java.lang.Long")) {
+            elemConsumer = (consumer, v) -> consumer.addLong((Long) v);
+        } else if (typeName.equals("double") || typeName.equals("java.lang.Double")) {
+            elemConsumer = (consumer, v) -> consumer.addDouble((Double) v);
+        } else if (typeName.equals("float") || typeName.equals("java.lang.Float")) {
+            elemConsumer = (consumer, v) -> consumer.addFloat((Float) v);
+        } else if (typeName.equals("short") || typeName.equals("java.lang.Short") ||
+                typeName.equals("byte") || typeName.equals("java.lang.Byte")) {
+            elemConsumer = (consumer, v) -> consumer.addInteger(((Number) v).intValue());
+        } else if (type.isEnum()) {
+            EnumsValues enumValues = new EnumsValues(type);
+            elemConsumer = (consumer, v) -> consumer.addBinary(enumValues.getValue(v));
+        } else if (type.isRecord()) {
+            CarpetRecordWriter recordWriter = new CarpetRecordWriter(recordConsumer, type, carpetConfiguration);
+            elemConsumer = (consumer, v) -> {
+                consumer.startGroup();
+                recordWriter.write(v);
+                consumer.endGroup();
+            };
+        } else if (Collection.class.isAssignableFrom(type)) {
+            throw new RecordTypeConversionException(
+                    "Nested collection in a collection is not supported in single level structure codification");
+        }
+        if (elemConsumer != null) {
+            return new OneLevelCollectionFieldWriter(f, elemConsumer);
+        }
+        throw new RecordTypeConversionException("Unsuported type in collection");
+    }
+
+    private class OneLevelCollectionFieldWriter extends FieldWriter {
+
+        private final BiConsumer<RecordConsumer, Object> consumer;
+
+        public OneLevelCollectionFieldWriter(RecordField recordField, BiConsumer<RecordConsumer, Object> consumer)
+                throws Throwable {
+            super(recordField);
+            this.consumer = consumer;
+        }
+
+        @Override
+        void writeField(Object object) {
+            var value = accesor.apply(object);
+            if (value != null) {
+                recordConsumer.startField(recordField.fieldName, recordField.idx);
+                Collection<?> coll = (Collection<?>) value;
+                for (var v : coll) {
+                    consumer.accept(recordConsumer, v);
+                }
+                recordConsumer.endField(recordField.fieldName, recordField.idx);
+            }
+        }
+    }
+
+    private FieldWriter createCollectionWriterTwoLevel(ParametizedObject parametized, RecordField f) {
+        return null;
+    }
+
+    private FieldWriter createCollectionWriterThreeLevel(ParametizedObject parametized, RecordField f)
+            throws Throwable {
+        return null;
+    }
+
+    private FieldWriter buildBasicTypeWriter(String typeName, Class<?> type, RecordField f) throws Throwable {
+        if (typeName.equals("int") || typeName.equals("java.lang.Integer")) {
+            return new IntegerFieldWriter(f);
+        } else if (typeName.equals("java.lang.String")) {
+            return new StringFieldWriter(f);
+        } else if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean")) {
+            return new BooleanFieldWriter(f);
+        } else if (typeName.equals("long") || typeName.equals("java.lang.Long")) {
+            return new LongFieldWriter(f);
+        } else if (typeName.equals("double") || typeName.equals("java.lang.Double")) {
+            return new DoubleFieldWriter(f);
+        } else if (typeName.equals("float") || typeName.equals("java.lang.Float")) {
+            return new FloatFieldWriter(f);
+        } else if (typeName.equals("short") || typeName.equals("java.lang.Short") ||
+                typeName.equals("byte") || typeName.equals("java.lang.Byte")) {
+            return new IntegerCompatibleFieldWriter(f);
+        } else if (type.isEnum()) {
+            return new EnumFieldWriter(f, type);
+        }
+        return null;
+    }
+
     public void write(Object record) {
-        for (var writter : writers) {
-            writter.writeField(record);
+        for (var fieldWriter : fieldWriters) {
+            fieldWriter.writeField(record);
         }
     }
 
@@ -223,23 +321,24 @@ public class CarpetRecordWriter {
             }
         }
 
-        private static class EnumsValues {
+    }
 
-            private final Binary[] values;
+    private static class EnumsValues {
 
-            EnumsValues(Class<?> enumType) {
-                Object[] enums = enumType.getEnumConstants();
-                values = new Binary[enums.length];
-                for (int i = 0; i < enums.length; i++) {
-                    values[i] = Binary.fromString(((Enum<?>) enums[i]).name());
-                }
+        private final Binary[] values;
+
+        EnumsValues(Class<?> enumType) {
+            Object[] enums = enumType.getEnumConstants();
+            values = new Binary[enums.length];
+            for (int i = 0; i < enums.length; i++) {
+                values[i] = Binary.fromString(((Enum<?>) enums[i]).name());
             }
-
-            public Binary getValue(Object v) {
-                return values[((Enum<?>) v).ordinal()];
-            }
-
         }
+
+        public Binary getValue(Object v) {
+            return values[((Enum<?>) v).ordinal()];
+        }
+
     }
 
     private class RecordFieldWriter extends FieldWriter {

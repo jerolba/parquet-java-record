@@ -276,6 +276,14 @@ class JavaRecord2SchemaTest {
             assertEquals(expected, schema.toString());
         }
 
+        @Test
+        void nestedGenericIsNotSupported() {
+            record GenericCollection<T>(String id, List<T> values) {
+            }
+            assertThrows(RecordTypeConversionException.class,
+                    () -> schemaFactory.createSchema(GenericCollection.class));
+        }
+
     }
 
     @Nested
@@ -442,6 +450,14 @@ class JavaRecord2SchemaTest {
                     }
                     """;
             assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void nestedGenericIsNotSupported() {
+            record GenericCollection<T>(String id, List<T> values) {
+            }
+            assertThrows(RecordTypeConversionException.class,
+                    () -> schemaFactory.createSchema(GenericCollection.class));
         }
 
     }
@@ -638,6 +654,14 @@ class JavaRecord2SchemaTest {
                     }
                     """;
             assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void nestedGenericIsNotSupported() {
+            record GenericCollection<T>(String id, List<T> values) {
+            }
+            assertThrows(RecordTypeConversionException.class,
+                    () -> schemaFactory.createSchema(GenericCollection.class));
         }
 
     }
