@@ -1,10 +1,11 @@
 package com.jerolba.carpet;
 
+import static com.jerolba.carpet.SimpleCollectionItemConsumerFactory.buildSimpleElementConsumer;
+
 import java.util.Collection;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
 
 class OneLevelStructureWriter {
@@ -17,44 +18,18 @@ class OneLevelStructureWriter {
         this.carpetConfiguration = carpetConfiguration;
     }
 
-    public Consumer<Object> createCollectionWriterOneLevel(ParametizedObject parametized, RecordField f)
+    public Consumer<Object> createCollectionWriter(ParametizedObject parametized, RecordField f)
             throws Throwable {
         Class<?> type = parametized.getActualType();
-        String typeName = type.getName();
-        BiConsumer<RecordConsumer, Object> elemConsumer = null;
-        if (typeName.equals("int") || typeName.equals("java.lang.Integer")) {
-            elemConsumer = (consumer, v) -> consumer.addInteger((Integer) v);
-        } else if (typeName.equals("java.lang.String")) {
-            elemConsumer = (consumer, v) -> consumer.addBinary(Binary.fromString((String) v));
-        } else if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean")) {
-            elemConsumer = (consumer, v) -> consumer.addBoolean((Boolean) v);
-        } else if (typeName.equals("long") || typeName.equals("java.lang.Long")) {
-            elemConsumer = (consumer, v) -> consumer.addLong((Long) v);
-        } else if (typeName.equals("double") || typeName.equals("java.lang.Double")) {
-            elemConsumer = (consumer, v) -> consumer.addDouble((Double) v);
-        } else if (typeName.equals("float") || typeName.equals("java.lang.Float")) {
-            elemConsumer = (consumer, v) -> consumer.addFloat((Float) v);
-        } else if (typeName.equals("short") || typeName.equals("java.lang.Short") ||
-                typeName.equals("byte") || typeName.equals("java.lang.Byte")) {
-            elemConsumer = (consumer, v) -> consumer.addInteger(((Number) v).intValue());
-        } else if (type.isEnum()) {
-            EnumsValues enumValues = new EnumsValues(type);
-            elemConsumer = (consumer, v) -> consumer.addBinary(enumValues.getValue(v));
-        } else if (type.isRecord()) {
-            CarpetRecordWriter recordWriter = new CarpetRecordWriter(recordConsumer, type, carpetConfiguration);
-            elemConsumer = (consumer, v) -> {
-                consumer.startGroup();
-                recordWriter.write(v);
-                consumer.endGroup();
-            };
-        } else if (Collection.class.isAssignableFrom(type)) {
-            throw new RecordTypeConversionException(
-                    "Nested collection in a collection is not supported in single level structure codification");
-        }
+        var elemConsumer = buildSimpleElementConsumer(type, recordConsumer, carpetConfiguration);
         if (elemConsumer != null) {
             return new OneLevelCollectionFieldWriter(f, elemConsumer);
         }
-        throw new RecordTypeConversionException("Unsuported type in collection");
+        if (Collection.class.isAssignableFrom(type)) {
+            throw new RecordTypeConversionException(
+                    "Nested collection in a collection is not supported in single level structure codification");
+        }
+        throw new RecordTypeConversionException("Unsuported type in collection " + type);
     }
 
     private class OneLevelCollectionFieldWriter extends FieldWriter {

@@ -45,19 +45,19 @@ public class CarpetWriter<T> {
         @Override
         protected WriteSupport<T> getWriteSupport(Configuration conf) {
             CarpetConfiguration carpetCfg = new CarpetConfiguration(annotatedLevels);
-            return new TarimaWriterSupport<>(recordClass, extraMetaData, carpetCfg);
+            return new CarpetWriterSupport<>(recordClass, extraMetaData, carpetCfg);
         }
 
     }
 
-    private static class TarimaWriterSupport<T> extends WriteSupport<T> {
+    private static class CarpetWriterSupport<T> extends WriteSupport<T> {
 
         private final Class<T> recordClass;
         private final Map<String, String> extraMetaData;
         private final CarpetConfiguration carpetConfiguration;
-        private CarpetMessageWriter<T> tarimaWriter;
+        private CarpetMessageWriter<T> carpetWriter;
 
-        public TarimaWriterSupport(Class<T> recordClass, Map<String, String> extraMetaData,
+        public CarpetWriterSupport(Class<T> recordClass, Map<String, String> extraMetaData,
                 CarpetConfiguration carpetConfiguration) {
             this.recordClass = recordClass;
             this.extraMetaData = extraMetaData;
@@ -79,7 +79,7 @@ public class CarpetWriter<T> {
         @Override
         public void prepareForWrite(RecordConsumer recordConsumer) {
             try {
-                tarimaWriter = new CarpetMessageWriter<>(recordConsumer, recordClass, carpetConfiguration);
+                carpetWriter = new CarpetMessageWriter<>(recordConsumer, recordClass, carpetConfiguration);
             } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
@@ -88,7 +88,7 @@ public class CarpetWriter<T> {
 
         @Override
         public void write(T record) {
-            tarimaWriter.write(record);
+            carpetWriter.write(record);
         }
     }
 

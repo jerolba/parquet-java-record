@@ -58,19 +58,12 @@ public class CarpetRecordWriter {
     private Consumer<Object> createCollectionWriter(ParametizedObject collectionClass, RecordField f) throws Throwable {
         return switch (carpetConfiguration.annotatedLevels()) {
         case ONE -> new OneLevelStructureWriter(recordConsumer, carpetConfiguration)
-                .createCollectionWriterOneLevel(collectionClass, f);
-        case TWO -> createCollectionWriterTwoLevel(collectionClass, f);
-        case THREE -> createCollectionWriterThreeLevel(collectionClass, f);
+                .createCollectionWriter(collectionClass, f);
+        case TWO -> new TwoLevelStructureWriter(recordConsumer, carpetConfiguration)
+                .createCollectionWriter(collectionClass, f);
+        case THREE -> new ThreeLevelStructureWriter(recordConsumer, carpetConfiguration)
+                .createCollectionWriter(collectionClass, f);
         };
-    }
-
-    private Consumer<Object> createCollectionWriterTwoLevel(ParametizedObject parametized, RecordField f) {
-        return null;
-    }
-
-    private Consumer<Object> createCollectionWriterThreeLevel(ParametizedObject parametized, RecordField f)
-            throws Throwable {
-        return null;
     }
 
     private FieldWriter buildBasicTypeWriter(String typeName, Class<?> type, RecordField f) throws Throwable {
