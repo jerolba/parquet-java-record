@@ -15,7 +15,6 @@ import org.apache.parquet.io.api.RecordConsumer;
 public class CarpetRecordWriter {
 
     private final RecordConsumer recordConsumer;
-    private final Class<?> recordClass;
     private final CarpetConfiguration carpetConfiguration;
 
     private final List<Consumer<Object>> fieldWriters = new ArrayList<>();
@@ -23,7 +22,6 @@ public class CarpetRecordWriter {
     public CarpetRecordWriter(RecordConsumer recordConsumer, Class<?> recordClass,
             CarpetConfiguration carpetConfiguration) throws Throwable {
         this.recordConsumer = recordConsumer;
-        this.recordClass = recordClass;
         this.carpetConfiguration = carpetConfiguration;
 
         // Preconditions: All fields are writable

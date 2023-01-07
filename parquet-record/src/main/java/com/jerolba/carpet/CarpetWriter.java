@@ -92,4 +92,23 @@ public class CarpetWriter<T> {
         }
     }
 
+    private static class CarpetMessageWriter<T> {
+
+        private final RecordConsumer recordConsumer;
+        private final CarpetRecordWriter writer;
+
+        CarpetMessageWriter(RecordConsumer recordConsumer, Class<T> recordClass,
+                CarpetConfiguration carpetConfiguration) throws Throwable {
+            this.recordConsumer = recordConsumer;
+            this.writer = new CarpetRecordWriter(recordConsumer, recordClass, carpetConfiguration);
+        }
+
+        void write(T record) {
+            recordConsumer.startMessage();
+            writer.write(record);
+            recordConsumer.endMessage();
+        }
+
+    }
+
 }

@@ -14,6 +14,7 @@ public class ParquetWriterTest<T> {
 
     private final String path;
     private final Class<T> type;
+    private AnnotatedLevels level = AnnotatedLevels.THREE;
 
     ParquetWriterTest(String path, Class<T> type) {
         this.path = path;
@@ -21,9 +22,16 @@ public class ParquetWriterTest<T> {
         new File(path).delete();
     }
 
+    public ParquetWriterTest<T> withLevel(AnnotatedLevels level) {
+        this.level = level;
+        return this;
+    }
+
     public void write(T... values) throws IOException {
         OutputStreamOutputFile output = new OutputStreamOutputFile(new FileOutputStream(path));
-        try (ParquetWriter<T> writer = CarpetWriter.builder(output, type).build()) {
+        try (ParquetWriter<T> writer = CarpetWriter.builder(output, type)
+                .levelStructure(level)
+                .build()) {
             for (var v : values) {
                 writer.write(v);
             }

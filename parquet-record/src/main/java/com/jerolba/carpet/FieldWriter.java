@@ -19,4 +19,5 @@ abstract class FieldWriter implements Consumer<Object> {
     public void accept(Object object) {
         writeField(object);
     }
+
 }

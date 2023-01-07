@@ -15,19 +15,13 @@
  */
 package com.jerolba.carpet;
 
+import static com.jerolba.carpet.AnnotatedLevels.ONE;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 
-import org.apache.parquet.hadoop.ParquetWriter;
 import org.junit.jupiter.api.Test;
-
-import com.jerolba.parquet.record.OutputStreamOutputFile;
-import com.jerolba.parquet.record.ParquetRecordReader;
 
 public class CarpetWriterCollectionOneLevelTest {
 
@@ -38,7 +32,7 @@ public class CarpetWriterCollectionOneLevelTest {
         }
 
         var rec1 = new MainRecord("foo", List.of(1, 2, 3), List.of(1.2, 3.2));
-        var writerTest = new ParquetWriterTest<>("/tmp/simpleCollection.parquet", MainRecord.class);
+        var writerTest = new ParquetWriterTest<>("/tmp/simpleCollection1.parquet", MainRecord.class).withLevel(ONE);
         writerTest.write(rec1);
     }
 
@@ -50,7 +44,7 @@ public class CarpetWriterCollectionOneLevelTest {
         var rec1 = new ConsecutiveNestedCollection("foo", List.of(List.of(1, 2, 3)));
         assertThrows(RecordTypeConversionException.class, () -> {
             var writerTest = new ParquetWriterTest<>("/tmp/consecutiveNestedCollectionsAreNotSupporteds.parquet",
-                    ConsecutiveNestedCollection.class);
+                    ConsecutiveNestedCollection.class).withLevel(ONE);
             writerTest.write(rec1);
         });
     }
@@ -65,7 +59,8 @@ public class CarpetWriterCollectionOneLevelTest {
         }
 
         var rec1 = new MainRecord("foo", List.of(new ChildRecord("Madrid", true), new ChildRecord("Sevilla", false)));
-        var writerTest = new ParquetWriterTest<>("/tmp/simpleCompositeCollection.parquet", MainRecord.class);
+        var writerTest = new ParquetWriterTest<>("/tmp/simpleCompositeCollection.parquet", MainRecord.class)
+                .withLevel(ONE);
         writerTest.write(rec1);
     }
 
@@ -80,35 +75,8 @@ public class CarpetWriterCollectionOneLevelTest {
         var rec1 = new NonConsecutiveNestedCollection("foo",
                 List.of(new ChildCollection("Apple", List.of("MacOs", "OS X"))));
         var writerTest = new ParquetWriterTest<>("/tmp/nonConsecutiveNestedCollections.parquet",
-                NonConsecutiveNestedCollection.class);
+                NonConsecutiveNestedCollection.class).withLevel(ONE);
         writerTest.write(rec1);
     }
 
-    private class ParquetWriterTest<T> {
-
-        private final String path;
-        private final Class<T> type;
-
-        ParquetWriterTest(String path, Class<T> type) {
-            this.path = path;
-            this.type = type;
-            new File(path).delete();
-        }
-
-        public void write(T... values) throws IOException {
-            OutputStreamOutputFile output = new OutputStreamOutputFile(new FileOutputStream(path));
-            try (ParquetWriter<T> writer = CarpetWriter.builder(output, type)
-                    .levelStructure(AnnotatedLevels.ONE)
-                    .build()) {
-                for (var v : values) {
-                    writer.write(v);
-                }
-            }
-        }
-
-        public Iterator<T> getReadIterator() throws IOException {
-            var reader = new ParquetRecordReader<>(path, type);
-            return reader.iterator();
-        }
-    }
 }

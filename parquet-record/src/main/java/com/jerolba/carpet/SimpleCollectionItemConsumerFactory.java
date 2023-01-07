@@ -5,9 +5,9 @@ import java.util.function.BiConsumer;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
 
-public class SimpleCollectionItemConsumerFactory {
+class SimpleCollectionItemConsumerFactory {
 
-    public static BiConsumer<RecordConsumer, Object> buildSimpleElementConsumer(Class<?> type,
+    static BiConsumer<RecordConsumer, Object> buildSimpleElementConsumer(Class<?> type,
             RecordConsumer recordConsumer, CarpetConfiguration carpetConfiguration) throws Throwable {
 
         BiConsumer<RecordConsumer, Object> elemConsumer = null;

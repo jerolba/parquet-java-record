@@ -9,9 +9,9 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.RecordComponent;
 import java.util.function.Function;
 
-public class Reflection {
+class Reflection {
 
-    public static Function<Object, Object> recordAccessor(Class<?> targetClass, RecordComponent recordComponent)
+    static Function<Object, Object> recordAccessor(Class<?> targetClass, RecordComponent recordComponent)
             throws Throwable {
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         MethodHandle findVirtual = lookup.findVirtual(targetClass, recordComponent.getName(),
