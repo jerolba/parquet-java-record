@@ -22,7 +22,7 @@ class ParametizedObject {
         if (genericType instanceof ParameterizedType paramType) {
             return new ParametizedObject(paramType);
         }
-        throw new RecordTypeConversionException("Unsuported type in collection ");
+        throw new RecordTypeConversionException("Unsuported type in collection");
     }
 
     public Class<?> getActualType() {
@@ -51,6 +51,10 @@ class ParametizedObject {
         return false;
     }
 
+    public boolean isMap() {
+        return false;
+    }
+
     public ParametizedObject getParametizedChild() {
         if (collectionType instanceof ParameterizedType paramType) {
             return new ParametizedObject(paramType);
@@ -58,7 +62,4 @@ class ParametizedObject {
         return null;
     }
 
-    public boolean isMap() {
-        return false;
-    }
 }

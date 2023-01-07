@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.parquet.schema.MessageType;
 import org.junit.jupiter.api.Nested;
@@ -662,6 +663,290 @@ class JavaRecord2SchemaTest {
             }
             assertThrows(RecordTypeConversionException.class,
                     () -> schemaFactory.createSchema(GenericCollection.class));
+        }
+
+    }
+
+    @Nested
+    class NestedMaps {
+
+        private final CarpetConfiguration twoLevel = new CarpetConfiguration(AnnotatedLevels.THREE);
+        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(twoLevel);
+
+        @Test
+        void nestedSimpleTypeMap() {
+            record SimpleTypeMap(String id, Map<String, Integer> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(SimpleTypeMap.class);
+            String expected = """
+                    message SimpleTypeMap {
+                      optional binary id (STRING);
+                      optional group values (MAP) {
+                        repeated group key_value {
+                          required binary key (STRING);
+                          optional int32 value;
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void nestedRecordMap() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record NestedRecordMap(String id, Map<String, ChildRecord> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(NestedRecordMap.class);
+            String expected = """
+                    message NestedRecordMap {
+                      optional binary id (STRING);
+                      optional group values (MAP) {
+                        repeated group key_value {
+                          required binary key (STRING);
+                          optional group value {
+                            optional binary id (STRING);
+                            optional boolean loaded;
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void mapWithKeyRecord() {
+            record KeyRecord(String id, String category) {
+
+            }
+            record SimpleTypeMap(String id, Map<KeyRecord, String> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(SimpleTypeMap.class);
+            String expected = """
+                    message SimpleTypeMap {
+                      optional binary id (STRING);
+                      optional group values (MAP) {
+                        repeated group key_value {
+                          required group key {
+                            optional binary id (STRING);
+                            optional binary category (STRING);
+                          }
+                          optional binary value (STRING);
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveNestedRecordMap() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record ConsecutiveNestedRecordMap(String id, Map<String, Map<String, ChildRecord>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveNestedRecordMap.class);
+            String expected = """
+                    message ConsecutiveNestedRecordMap {
+                      optional binary id (STRING);
+                      optional group values (MAP) {
+                        repeated group key_value {
+                          required binary key (STRING);
+                          optional group value (MAP) {
+                            repeated group key_value {
+                              required binary key (STRING);
+                              optional group value {
+                                optional binary id (STRING);
+                                optional boolean loaded;
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveNestedMapCollection() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record ConsecutiveNestedRecordMap(String id, Map<String, List<ChildRecord>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveNestedRecordMap.class);
+            String expected = """
+                    message ConsecutiveNestedRecordMap {
+                      optional binary id (STRING);
+                      optional group values (MAP) {
+                        repeated group key_value {
+                          required binary key (STRING);
+                          optional group value (LIST) {
+                            repeated group list {
+                              optional group element {
+                                optional binary id (STRING);
+                                optional boolean loaded;
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveTripleNestedMap() {
+
+            record ChildRecord(String id, Boolean loaded) {
+
+            }
+            record ConsecutiveTripleNestedMap(String id,
+                    Map<String, Map<String, Map<String, ChildRecord>>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveTripleNestedMap.class);
+            String expected = """
+                    message ConsecutiveTripleNestedMap {
+                      optional binary id (STRING);
+                      optional group values (MAP) {
+                        repeated group key_value {
+                          required binary key (STRING);
+                          optional group value (MAP) {
+                            repeated group key_value {
+                              required binary key (STRING);
+                              optional group value (MAP) {
+                                repeated group key_value {
+                                  required binary key (STRING);
+                                  optional group value {
+                                    optional binary id (STRING);
+                                    optional boolean loaded;
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveNestedSimpleTypeMap() {
+            record ConsecutiveNestedCollection(String id, Map<String, Map<String, Integer>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveNestedCollection.class);
+            String expected = """
+                    message ConsecutiveNestedCollection {
+                      optional binary id (STRING);
+                      optional group values (MAP) {
+                        repeated group key_value {
+                          required binary key (STRING);
+                          optional group value (MAP) {
+                            repeated group key_value {
+                              required binary key (STRING);
+                              optional int32 value;
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void consecutiveTripleNestedSimpleTypeMap() {
+            record ConsecutiveTripleNestedCollection(String id, Map<String, Map<String, Map<String, Integer>>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(ConsecutiveTripleNestedCollection.class);
+            String expected = """
+                    message ConsecutiveTripleNestedCollection {
+                      optional binary id (STRING);
+                      optional group values (MAP) {
+                        repeated group key_value {
+                          required binary key (STRING);
+                          optional group value (MAP) {
+                            repeated group key_value {
+                              required binary key (STRING);
+                              optional group value (MAP) {
+                                repeated group key_value {
+                                  required binary key (STRING);
+                                  optional int32 value;
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void nonConsecutiveNestedMaps() {
+            record ChildCollection(String name, Map<Integer, Long> alias) {
+
+            }
+            record NonConsecutiveNestedMaps(String id, Map<String, ChildCollection> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(NonConsecutiveNestedMaps.class);
+            String expected = """
+                    message NonConsecutiveNestedMaps {
+                      optional binary id (STRING);
+                      optional group values (MAP) {
+                        repeated group key_value {
+                          required binary key (STRING);
+                          optional group value {
+                            optional binary name (STRING);
+                            optional group alias (MAP) {
+                              repeated group key_value {
+                                required int32 key;
+                                optional int64 value;
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void genericKeyMapNotSupported() {
+            record GenericMap<T>(String id, Map<T, String> values) {
+            }
+            assertThrows(RecordTypeConversionException.class,
+                    () -> schemaFactory.createSchema(GenericMap.class));
+        }
+
+        @Test
+        void genericValueMapNotSupported() {
+            record GenericMap<T>(String id, Map<String, T> values) {
+            }
+            assertThrows(RecordTypeConversionException.class,
+                    () -> schemaFactory.createSchema(GenericMap.class));
         }
 
     }
