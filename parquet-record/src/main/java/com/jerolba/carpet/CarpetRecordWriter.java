@@ -1,7 +1,7 @@
 package com.jerolba.carpet;
 
 import static com.jerolba.carpet.AliasField.getFieldName;
-import static com.jerolba.carpet.ParametizedObject.getCollectionClass;
+import static com.jerolba.carpet.Parametized.getParameterizedCollection;
 
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
@@ -41,7 +41,7 @@ public class CarpetRecordWriter {
                     var recordWriter = new CarpetRecordWriter(recordConsumer, type, carpetConfiguration);
                     writer = new RecordFieldWriter(f, recordWriter);
                 } else if (Collection.class.isAssignableFrom(type)) {
-                    ParametizedObject collectionClass = getCollectionClass(attr);
+                    ParameterizedCollection collectionClass = getParameterizedCollection(attr);
                     writer = createCollectionWriter(collectionClass, f);
                 } else {
                     System.out.println(typeName + " can not be serialized");
@@ -53,7 +53,8 @@ public class CarpetRecordWriter {
         }
     }
 
-    private Consumer<Object> createCollectionWriter(ParametizedObject collectionClass, RecordField f) throws Throwable {
+    private Consumer<Object> createCollectionWriter(ParameterizedCollection collectionClass, RecordField f)
+            throws Throwable {
         return switch (carpetConfiguration.annotatedLevels()) {
         case ONE -> new OneLevelStructureWriter(recordConsumer, carpetConfiguration)
                 .createCollectionWriter(collectionClass, f);

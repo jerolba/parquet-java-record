@@ -18,7 +18,7 @@ class OneLevelStructureWriter {
         this.carpetConfiguration = carpetConfiguration;
     }
 
-    public Consumer<Object> createCollectionWriter(ParametizedObject parametized, RecordField f)
+    public Consumer<Object> createCollectionWriter(ParameterizedCollection parametized, RecordField f)
             throws Throwable {
         Class<?> type = parametized.getActualType();
         var elemConsumer = buildSimpleElementConsumer(type, recordConsumer, carpetConfiguration);

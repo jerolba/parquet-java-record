@@ -665,6 +665,29 @@ class JavaRecord2SchemaTest {
                     () -> schemaFactory.createSchema(GenericCollection.class));
         }
 
+        @Test
+        void collectionWithNestedMap() {
+            record CollectionWithNestedMap(String id, List<Map<String, Integer>> values) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(CollectionWithNestedMap.class);
+            String expected = """
+                    message CollectionWithNestedMap {
+                      optional binary id (STRING);
+                      optional group values (LIST) {
+                        repeated group list {
+                          optional group element (MAP) {
+                            repeated group key_value {
+                              required binary key (STRING);
+                              optional int32 value;
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
     }
 
     @Nested

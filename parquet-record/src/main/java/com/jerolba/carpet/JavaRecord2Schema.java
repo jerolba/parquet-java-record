@@ -2,12 +2,13 @@ package com.jerolba.carpet;
 
 import static com.jerolba.carpet.AliasField.getFieldName;
 import static com.jerolba.carpet.NotNullField.isNotNull;
-import static com.jerolba.carpet.ParametizedMap.getMapClass;
-import static com.jerolba.carpet.ParametizedObject.getCollectionClass;
+import static com.jerolba.carpet.Parametized.getParameterizedCollection;
+import static com.jerolba.carpet.Parametized.getParameterizedMap;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.enumType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.stringType;
 import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BINARY;
 import static org.apache.parquet.schema.Type.Repetition.OPTIONAL;
+import static org.apache.parquet.schema.Type.Repetition.REPEATED;
 import static org.apache.parquet.schema.Type.Repetition.REQUIRED;
 
 import java.lang.reflect.RecordComponent;
@@ -37,8 +38,7 @@ public class JavaRecord2Schema {
     }
 
     public MessageType createSchema(Class<?> recordClass) {
-        Set<Class<?>> visited = new HashSet<>();
-        return build(recordClass, visited);
+        return build(recordClass, new HashSet<>());
     }
 
     private MessageType build(Class<?> recordClass, Set<Class<?>> visited) {
@@ -68,12 +68,11 @@ public class JavaRecord2Schema {
             } else if (type.isEnum()) {
                 fields.add(Types.primitive(BINARY, repetition).as(enumType()).named(fieldName));
             } else if (Collection.class.isAssignableFrom(type)) {
-                ParametizedObject collectionClass = getCollectionClass(attr);
-                fields.add(createCollectionType(fieldName, collectionClass, visited, attr, repetition));
+                var parameterizedCollection = getParameterizedCollection(attr);
+                fields.add(createCollectionType(fieldName, parameterizedCollection, visited, attr, repetition));
             } else if (Map.class.isAssignableFrom(type)) {
-                ParametizedMap mapClass = getMapClass(attr);
-                fields.add(createMap(fieldName, mapClass, visited, repetition));
-
+                var parameterizedMap = getParameterizedMap(attr);
+                fields.add(createMap(fieldName, parameterizedMap, visited, repetition));
             } else {
                 java.lang.reflect.Type genericType = attr.getGenericType();
                 if (genericType instanceof TypeVariable<?>) {
@@ -91,72 +90,60 @@ public class JavaRecord2Schema {
         return fields;
     }
 
-    private Type createCollectionType(String fieldName, ParametizedObject collectionClass, Set<Class<?>> visited,
+    private Type createCollectionType(String fieldName, ParameterizedCollection collectionClass, Set<Class<?>> visited,
             RecordComponent attr, Repetition repetition) {
         return switch (carpetConfiguration.annotatedLevels()) {
-        case ONE -> createCollectionOneLevel(fieldName, collectionClass, visited, attr);
+        case ONE -> createCollectionOneLevel(fieldName, collectionClass, visited);
         case TWO -> createCollectionTwoLevel(fieldName, collectionClass, visited, repetition);
         case THREE -> createCollectionThreeLevel(fieldName, collectionClass, visited, repetition);
         };
     }
 
-    private Type createCollectionOneLevel(String fieldName, ParametizedObject parametized, Set<Class<?>> visited,
-            RecordComponent attr) {
-        Repetition repetition = Repetition.REPEATED;
-
+    private Type createCollectionOneLevel(String fieldName, ParameterizedCollection parametized,
+            Set<Class<?>> visited) {
         if (parametized.isCollection()) {
             throw new RecordTypeConversionException(
                     "Recursive collections not supported in annotated 1-level structures");
         }
         Class<?> type = parametized.getActualType();
-        PrimitiveTypeName primitiveType = simpleTypeItems(type);
-        if (primitiveType != null) {
-            return new PrimitiveType(repetition, primitiveType, fieldName);
-        } else if (type.getName().equals("java.lang.String")) {
-            return Types.primitive(BINARY, repetition).as(stringType()).named(fieldName);
-        } else if (type.isRecord()) {
-            List<Type> childFields = buildCompositeChild(type, visited);
-            return new GroupType(repetition, fieldName, childFields);
-        } else if (type.isEnum()) {
-            return Types.primitive(BINARY, repetition).as(enumType()).named(fieldName);
-        } else {
-            // Generic types in first child are detected
-        }
-        throw new RecordTypeConversionException("Unsuported type in collection");
+        return buildTypeElement(type, visited, REPEATED, fieldName);
     }
 
-    private Type createCollectionTwoLevel(String fieldName, ParametizedObject parametized, Set<Class<?>> visited,
+    private Type createCollectionTwoLevel(String fieldName, ParameterizedCollection parametized, Set<Class<?>> visited,
             Repetition repetition) {
+        Type nested = createCollectionNestedTwoLevel(parametized, visited);
+        return ConversionPatterns.listType(repetition, fieldName, nested);
+    }
 
+    private Type createCollectionNestedTwoLevel(ParameterizedCollection parametized, Set<Class<?>> visited) {
         if (parametized.isCollection()) {
-            Type nested = createCollectionType("element", parametized.getParametizedChild(), visited, null,
-                    Repetition.REPEATED);
-            return ConversionPatterns.listType(repetition, fieldName, nested);
+            return createCollectionType("element", parametized.getParametizedAsCollection(), visited, null, REPEATED);
         }
         Class<?> type = parametized.getActualType();
-        PrimitiveTypeName primitiveType = simpleTypeItems(type);
-        if (primitiveType != null) {
-            var nested = new PrimitiveType(Repetition.REPEATED, primitiveType, "element");
-            return ConversionPatterns.listType(repetition, fieldName, nested);
-        } else if (type.getName().equals("java.lang.String")) {
-            var nested = Types.primitive(BINARY, Repetition.REPEATED).as(stringType()).named("element");
-            return ConversionPatterns.listType(repetition, fieldName, nested);
-        } else if (type.isRecord()) {
-            List<Type> childFields = buildCompositeChild(type, visited);
-            var nested = new GroupType(Repetition.REPEATED, "element", childFields);
-            return ConversionPatterns.listType(repetition, fieldName, nested);
-        } else if (type.isEnum()) {
-            var nested = Types.primitive(BINARY, Repetition.REPEATED).as(enumType()).named("element");
-            return ConversionPatterns.listType(repetition, fieldName, nested);
-        } else {
-            // Generic types in first child are detected
-        }
-        throw new RecordTypeConversionException("Unsuported type in collection");
+        return buildTypeElement(type, visited, REPEATED, "element");
     }
 
-    private Type createMap(String fieldName, ParametizedMap parametized, Set<Class<?>> visited, Repetition repetition) {
+    private Type createCollectionThreeLevel(String fieldName, ParameterizedCollection parametized,
+            Set<Class<?>> visited, Repetition repetition) {
+        Type nested = createCollectionNestedThreeLevel(parametized, visited);
+        return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+    }
+
+    private Type createCollectionNestedThreeLevel(ParameterizedCollection parametized, Set<Class<?>> visited) {
+        if (parametized.isCollection()) {
+            return createCollectionType("element", parametized.getParametizedAsCollection(), visited, null, OPTIONAL);
+        }
+        if (parametized.isMap()) {
+            return createMap("element", parametized.getParametizedAsMap(), visited, OPTIONAL);
+        }
+        Class<?> type = parametized.getActualType();
+        return buildTypeElement(type, visited, OPTIONAL, "element");
+    }
+
+    private Type createMap(String fieldName, ParameterizedMap parametized, Set<Class<?>> visited,
+            Repetition repetition) {
         Class<?> keyType = parametized.getKeyActualType();
-        Type nestedKey = buildMapElement(keyType, visited, REQUIRED, "key");
+        Type nestedKey = buildTypeElement(keyType, visited, REQUIRED, "key");
 
         if (parametized.valueIsCollection()) {
             Type childCollection = createCollectionType("value", parametized.getValueTypeAsCollection(),
@@ -169,7 +156,7 @@ public class JavaRecord2Schema {
         }
 
         Class<?> valueType = parametized.getValueActualType();
-        Type nestedValue = buildMapElement(valueType, visited, OPTIONAL, "value");
+        Type nestedValue = buildTypeElement(valueType, visited, OPTIONAL, "value");
         if (nestedKey != null && nestedValue != null) {
             // TODO: what to change to support generation of older versions?
             return Types.map(repetition).key(nestedKey).value(nestedValue).named(fieldName);
@@ -179,50 +166,21 @@ public class JavaRecord2Schema {
         throw new RecordTypeConversionException("Unsuported type in Map");
     }
 
-    private Type buildMapElement(Class<?> keyType, Set<Class<?>> visited, Repetition repetition, String name) {
-        PrimitiveTypeName primitiveKeyType = simpleTypeItems(keyType);
-        Type nestedKey = null;
+    private Type buildTypeElement(Class<?> type, Set<Class<?>> visited, Repetition repetition, String name) {
+        PrimitiveTypeName primitiveKeyType = simpleTypeItems(type);
         if (primitiveKeyType != null) {
-            nestedKey = new PrimitiveType(repetition, primitiveKeyType, name);
-        } else if (keyType.getName().equals("java.lang.String")) {
-            nestedKey = Types.primitive(BINARY, repetition).as(stringType()).named(name);
-        } else if (keyType.isRecord()) {
-            List<Type> childFields = buildCompositeChild(keyType, visited);
-            nestedKey = new GroupType(repetition, name, childFields);
-        } else if (keyType.isEnum()) {
-            nestedKey = Types.primitive(BINARY, repetition).as(enumType()).named(name);
-        } else {
-            // Generic types in first child are detected
-        }
-        return nestedKey;
-    }
-
-    private Type createCollectionThreeLevel(String fieldName, ParametizedObject parametized, Set<Class<?>> visited,
-            Repetition repetition) {
-
-        if (parametized.isCollection()) {
-            Type nested = createCollectionType("element", parametized.getParametizedChild(), visited, null, OPTIONAL);
-            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
-        }
-        Class<?> type = parametized.getActualType();
-        PrimitiveTypeName primitiveType = simpleTypeItems(type);
-        if (primitiveType != null) {
-            var nested = new PrimitiveType(OPTIONAL, primitiveType, "element");
-            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+            return new PrimitiveType(repetition, primitiveKeyType, name);
         } else if (type.getName().equals("java.lang.String")) {
-            var nested = Types.primitive(BINARY, OPTIONAL).as(stringType()).named("element");
-            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+            return Types.primitive(BINARY, repetition).as(stringType()).named(name);
         } else if (type.isRecord()) {
             List<Type> childFields = buildCompositeChild(type, visited);
-            var nested = new GroupType(OPTIONAL, "element", childFields);
-            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+            return new GroupType(repetition, name, childFields);
         } else if (type.isEnum()) {
-            var nested = Types.primitive(BINARY, OPTIONAL).as(enumType()).named("element");
-            return ConversionPatterns.listOfElements(repetition, fieldName, nested);
+            return Types.primitive(BINARY, repetition).as(enumType()).named(name);
         } else {
             // Generic types in first child are detected
         }
-        throw new RecordTypeConversionException("Unsuported type in collection");
+        throw new RecordTypeConversionException("Unsuported type " + type);
     }
 
     private PrimitiveTypeName simpleTypeItems(Class<?> type) {

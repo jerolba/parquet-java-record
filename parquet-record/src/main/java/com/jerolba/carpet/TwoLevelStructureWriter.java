@@ -18,11 +18,11 @@ class TwoLevelStructureWriter {
         this.carpetConfiguration = carpetConfiguration;
     }
 
-    public Consumer<Object> createCollectionWriter(ParametizedObject parametized, RecordField recordField)
+    public Consumer<Object> createCollectionWriter(ParameterizedCollection parametized, RecordField recordField)
             throws Throwable {
         BiConsumer<RecordConsumer, Object> elemConsumer = null;
         if (parametized.isCollection() || parametized.isMap()) {
-            ParametizedObject parametizedChild = parametized.getParametizedChild();
+            ParameterizedCollection parametizedChild = parametized.getParametizedAsCollection();
             TwoLevelStructureWriter child = new TwoLevelStructureWriter(recordConsumer, carpetConfiguration);
             Consumer<Object> childWriter = child.createCollectionWriter(parametizedChild, null);
             elemConsumer = (consumer, v) -> childWriter.accept(v);
