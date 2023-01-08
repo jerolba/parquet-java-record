@@ -5,8 +5,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.parquet.avro.AvroParquetReader;
+import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.hadoop.ParquetWriter;
 
+import com.jerolba.parquet.record.FileSystemInputFile;
 import com.jerolba.parquet.record.OutputStreamOutputFile;
 import com.jerolba.parquet.record.ParquetRecordReader;
 
@@ -41,5 +46,13 @@ public class ParquetWriterTest<T> {
     public Iterator<T> getReadIterator() throws IOException {
         var reader = new ParquetRecordReader<>(path, type);
         return reader.iterator();
+    }
+
+    public ParquetReader<GenericRecord> getGenericRecordReader() throws IOException {
+        ParquetReader<GenericRecord> reader = AvroParquetReader.<GenericRecord>builder(
+                new FileSystemInputFile(new File(path)))
+                .withDataModel(GenericData.get())
+                .build();
+        return reader;
     }
 }

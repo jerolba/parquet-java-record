@@ -2,11 +2,13 @@ package com.jerolba.carpet;
 
 import static com.jerolba.carpet.AliasField.getFieldName;
 import static com.jerolba.carpet.Parametized.getParameterizedCollection;
+import static com.jerolba.carpet.Parametized.getParameterizedMap;
 
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.Binary;
@@ -43,6 +45,9 @@ public class CarpetRecordWriter {
                 } else if (Collection.class.isAssignableFrom(type)) {
                     ParameterizedCollection collectionClass = getParameterizedCollection(attr);
                     writer = createCollectionWriter(collectionClass, f);
+                } else if (Map.class.isAssignableFrom(type)) {
+                    ParameterizedMap mapClass = getParameterizedMap(attr);
+                    writer = createMapWriter(mapClass, f);
                 } else {
                     System.out.println(typeName + " can not be serialized");
                     // throw new RuntimeException(typeName + " can not be serialized");
@@ -63,6 +68,12 @@ public class CarpetRecordWriter {
         case THREE -> new ThreeLevelStructureWriter(recordConsumer, carpetConfiguration)
                 .createCollectionWriter(collectionClass, f);
         };
+    }
+
+    private Consumer<Object> createMapWriter(ParameterizedMap mapClass, RecordField f)
+            throws Throwable {
+        return new MapStructureWriter(recordConsumer, carpetConfiguration).createMapWriter(mapClass, f);
+
     }
 
     private FieldWriter buildBasicTypeWriter(String typeName, Class<?> type, RecordField f) throws Throwable {

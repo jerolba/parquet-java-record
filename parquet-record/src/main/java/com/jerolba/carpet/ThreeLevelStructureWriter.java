@@ -21,7 +21,7 @@ class ThreeLevelStructureWriter {
     public Consumer<Object> createCollectionWriter(ParameterizedCollection parametized, RecordField recordField)
             throws Throwable {
         BiConsumer<RecordConsumer, Object> elemConsumer = null;
-        if (parametized.isCollection() || parametized.isMap()) {
+        if (parametized.isCollection()) {
             ParameterizedCollection parametizedChild = parametized.getParametizedAsCollection();
             ThreeLevelStructureWriter child = new ThreeLevelStructureWriter(recordConsumer, carpetConfiguration);
             Consumer<Object> childWriter = child.createCollectionWriter(parametizedChild, null);
