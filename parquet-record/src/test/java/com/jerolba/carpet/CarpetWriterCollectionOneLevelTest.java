@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -76,6 +77,18 @@ public class CarpetWriterCollectionOneLevelTest {
                 List.of(new ChildCollection("Apple", List.of("MacOs", "OS X"))));
         var writerTest = new ParquetWriterTest<>("/tmp/nonConsecutiveNestedCollections.parquet",
                 NonConsecutiveNestedCollection.class).withLevel(ONE);
+        writerTest.write(rec1);
+    }
+
+    @Test
+    void nestedMapInCollection() throws IOException {
+
+        record MapInCollection(String name, List<Map<String, Integer>> ids) {
+        }
+
+        var rec1 = new MapInCollection("foo",
+                List.of(Map.of("1", 1, "2", 2, "3", 3), Map.of("1", 10, "2", 20, "3", 30)));
+        var writerTest = new ParquetWriterTest<>("/tmp/mapInCollection.parquet", MapInCollection.class).withLevel(ONE);
         writerTest.write(rec1);
     }
 

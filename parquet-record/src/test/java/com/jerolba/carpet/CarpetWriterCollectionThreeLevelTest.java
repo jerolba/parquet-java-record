@@ -17,6 +17,7 @@ package com.jerolba.carpet;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,6 +32,9 @@ public class CarpetWriterCollectionThreeLevelTest {
         var rec = new MainRecord("foo", List.of(1, 2, 3), List.of(1.2, 3.2));
         var writerTest = new ParquetWriterTest<>("/tmp/simpleCollection.parquet", MainRecord.class);
         writerTest.write(rec);
+
+        var reader = writerTest.getGenericRecordReader();
+        System.out.println(reader.read());
     }
 
     @Test
@@ -42,6 +46,9 @@ public class CarpetWriterCollectionThreeLevelTest {
         var writerTest = new ParquetWriterTest<>("/tmp/consecutiveNestedCollectionsAreNotSupporteds.parquet",
                 ConsecutiveNestedCollection.class);
         writerTest.write(rec);
+
+        var reader = writerTest.getGenericRecordReader();
+        System.out.println(reader.read());
     }
 
     @Test
@@ -56,6 +63,9 @@ public class CarpetWriterCollectionThreeLevelTest {
         var rec = new MainRecord("foo", List.of(new ChildRecord("Madrid", true), new ChildRecord("Sevilla", false)));
         var writerTest = new ParquetWriterTest<>("/tmp/simpleCompositeCollection.parquet", MainRecord.class);
         writerTest.write(rec);
+
+        var reader = writerTest.getGenericRecordReader();
+        System.out.println(reader.read());
     }
 
     @Test
@@ -72,6 +82,8 @@ public class CarpetWriterCollectionThreeLevelTest {
         var writerTest = new ParquetWriterTest<>("/tmp/consecutiveNestedCompositeCollection.parquet", MainRecord.class);
         writerTest.write(rec);
 
+        var reader = writerTest.getGenericRecordReader();
+        System.out.println(reader.read());
     }
 
     @Test
@@ -87,6 +99,23 @@ public class CarpetWriterCollectionThreeLevelTest {
         var writerTest = new ParquetWriterTest<>("/tmp/nonConsecutiveNestedCollections.parquet",
                 NonConsecutiveNestedCollection.class);
         writerTest.write(rec);
+
+        var reader = writerTest.getGenericRecordReader();
+        System.out.println(reader.read());
     }
 
+    @Test
+    void nestedMapInCollection() throws IOException {
+
+        record MapInCollection(String name, List<Map<String, Integer>> ids) {
+        }
+
+        var rec = new MapInCollection("foo",
+                List.of(Map.of("1", 1, "2", 2, "3", 3), Map.of("1", 10, "2", 20, "3", 30)));
+        var writerTest = new ParquetWriterTest<>("/tmp/mapInCollection.parquet", MapInCollection.class);
+        writerTest.write(rec);
+
+        var reader = writerTest.getGenericRecordReader();
+        System.out.println(reader.read());
+    }
 }

@@ -26,6 +26,11 @@ class ThreeLevelStructureWriter {
             ThreeLevelStructureWriter child = new ThreeLevelStructureWriter(recordConsumer, carpetConfiguration);
             Consumer<Object> childWriter = child.createCollectionWriter(parametizedChild, null);
             elemConsumer = (consumer, v) -> childWriter.accept(v);
+        } else if (parametized.isMap()) {
+            ParameterizedMap parametizedChild = parametized.getParametizedAsMap();
+            var mapStructWriter = new MapStructureWriter(recordConsumer, carpetConfiguration);
+            Consumer<Object> childWriter = mapStructWriter.createMapWriter(parametizedChild, null);
+            elemConsumer = (consumer, v) -> childWriter.accept(v);
         } else {
             Class<?> type = parametized.getActualType();
             elemConsumer = buildSimpleElementConsumer(type, recordConsumer, carpetConfiguration);

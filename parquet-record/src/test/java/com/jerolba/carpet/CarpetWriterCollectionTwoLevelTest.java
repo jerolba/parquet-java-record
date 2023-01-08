@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -101,6 +102,21 @@ public class CarpetWriterCollectionTwoLevelTest {
 
         var it = writerTest.getReadIterator();
         assertEquals(rec, it.next());
+    }
+
+    @Test
+    void nestedMapInCollection() throws IOException {
+
+        record MapInCollection(String name, List<Map<String, Integer>> ids) {
+        }
+
+        var rec = new MapInCollection("foo",
+                List.of(Map.of("1", 1, "2", 2, "3", 3), Map.of("1", 10, "2", 20, "3", 30)));
+        var writerTest = new ParquetWriterTest<>("/tmp/mapInCollection.parquet", MapInCollection.class).withLevel(TWO);
+        writerTest.write(rec);
+
+        var reader = writerTest.getGenericRecordReader();
+        System.out.print(reader.read());
     }
 
 }

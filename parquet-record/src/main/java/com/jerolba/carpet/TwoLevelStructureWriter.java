@@ -21,10 +21,15 @@ class TwoLevelStructureWriter {
     public Consumer<Object> createCollectionWriter(ParameterizedCollection parametized, RecordField recordField)
             throws Throwable {
         BiConsumer<RecordConsumer, Object> elemConsumer = null;
-        if (parametized.isCollection() || parametized.isMap()) {
+        if (parametized.isCollection()) {
             ParameterizedCollection parametizedChild = parametized.getParametizedAsCollection();
             TwoLevelStructureWriter child = new TwoLevelStructureWriter(recordConsumer, carpetConfiguration);
             Consumer<Object> childWriter = child.createCollectionWriter(parametizedChild, null);
+            elemConsumer = (consumer, v) -> childWriter.accept(v);
+        } else if (parametized.isMap()) {
+            ParameterizedMap parametizedChild = parametized.getParametizedAsMap();
+            var mapStructWriter = new MapStructureWriter(recordConsumer, carpetConfiguration);
+            Consumer<Object> childWriter = mapStructWriter.createMapWriter(parametizedChild, null);
             elemConsumer = (consumer, v) -> childWriter.accept(v);
         } else {
             Class<?> type = parametized.getActualType();
@@ -65,6 +70,7 @@ class TwoLevelStructureWriter {
                 recordConsumer.endField(recordField.fieldName(), recordField.idx());
             }
         }
+
     }
 
     private void writeGroupElement(BiConsumer<RecordConsumer, Object> innerStructureWriter, Object value) {

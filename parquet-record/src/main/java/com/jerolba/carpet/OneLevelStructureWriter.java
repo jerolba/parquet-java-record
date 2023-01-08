@@ -18,18 +18,26 @@ class OneLevelStructureWriter {
         this.carpetConfiguration = carpetConfiguration;
     }
 
-    public Consumer<Object> createCollectionWriter(ParameterizedCollection parametized, RecordField f)
+    public Consumer<Object> createCollectionWriter(ParameterizedCollection parametized, RecordField field)
             throws Throwable {
-        Class<?> type = parametized.getActualType();
-        var elemConsumer = buildSimpleElementConsumer(type, recordConsumer, carpetConfiguration);
-        if (elemConsumer != null) {
-            return new OneLevelCollectionFieldWriter(f, elemConsumer);
-        }
-        if (Collection.class.isAssignableFrom(type)) {
+        if (parametized.isCollection()) {
             throw new RecordTypeConversionException(
                     "Nested collection in a collection is not supported in single level structure codification");
         }
-        throw new RecordTypeConversionException("Unsuported type in collection " + type);
+        BiConsumer<RecordConsumer, Object> elemConsumer = null;
+        if (parametized.isMap()) {
+            ParameterizedMap parametizedChild = parametized.getParametizedAsMap();
+            var mapStructWriter = new MapStructureWriter(recordConsumer, carpetConfiguration);
+            Consumer<Object> childWriter = mapStructWriter.createMapWriter(parametizedChild, null);
+            elemConsumer = (consumer, v) -> childWriter.accept(v);
+        } else {
+            Class<?> type = parametized.getActualType();
+            elemConsumer = buildSimpleElementConsumer(type, recordConsumer, carpetConfiguration);
+        }
+        if (elemConsumer == null) {
+            throw new RecordTypeConversionException("Unsuported type in collection");
+        }
+        return new OneLevelCollectionFieldWriter(field, elemConsumer);
     }
 
     private class OneLevelCollectionFieldWriter extends FieldWriter {

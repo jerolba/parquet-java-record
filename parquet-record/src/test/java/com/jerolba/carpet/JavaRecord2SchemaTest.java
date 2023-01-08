@@ -285,6 +285,26 @@ class JavaRecord2SchemaTest {
                     () -> schemaFactory.createSchema(GenericCollection.class));
         }
 
+        @Test
+        void nestedMapInCollection() {
+            record MapInCollection(String name, List<Map<String, Integer>> ids) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(MapInCollection.class);
+            String expected = """
+                    message MapInCollection {
+                      optional binary name (STRING);
+                      repeated group ids (MAP) {
+                        repeated group key_value {
+                          required binary key (STRING);
+                          optional int32 value;
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
     }
 
     @Nested
@@ -459,6 +479,28 @@ class JavaRecord2SchemaTest {
             }
             assertThrows(RecordTypeConversionException.class,
                     () -> schemaFactory.createSchema(GenericCollection.class));
+        }
+
+        @Test
+        void nestedMapInCollection() {
+            record MapInCollection(String name, List<Map<String, Integer>> ids) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(MapInCollection.class);
+            String expected = """
+                    message MapInCollection {
+                      optional binary name (STRING);
+                      optional group ids (LIST) {
+                        repeated group element (MAP) {
+                          repeated group key_value {
+                            required binary key (STRING);
+                            optional int32 value;
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
         }
 
     }
@@ -675,6 +717,30 @@ class JavaRecord2SchemaTest {
                     message CollectionWithNestedMap {
                       optional binary id (STRING);
                       optional group values (LIST) {
+                        repeated group list {
+                          optional group element (MAP) {
+                            repeated group key_value {
+                              required binary key (STRING);
+                              optional int32 value;
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """;
+            assertEquals(expected, schema.toString());
+        }
+
+        @Test
+        void nestedMapInCollection() {
+            record MapInCollection(String name, List<Map<String, Integer>> ids) {
+            }
+
+            MessageType schema = schemaFactory.createSchema(MapInCollection.class);
+            String expected = """
+                    message MapInCollection {
+                      optional binary name (STRING);
+                      optional group ids (LIST) {
                         repeated group list {
                           optional group element (MAP) {
                             repeated group key_value {

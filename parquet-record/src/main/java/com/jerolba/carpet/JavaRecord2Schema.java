@@ -72,7 +72,7 @@ public class JavaRecord2Schema {
                 fields.add(createCollectionType(fieldName, parameterizedCollection, visited, attr, repetition));
             } else if (Map.class.isAssignableFrom(type)) {
                 var parameterizedMap = getParameterizedMap(attr);
-                fields.add(createMap(fieldName, parameterizedMap, visited, repetition));
+                fields.add(createMapType(fieldName, parameterizedMap, visited, repetition));
             } else {
                 java.lang.reflect.Type genericType = attr.getGenericType();
                 if (genericType instanceof TypeVariable<?>) {
@@ -105,6 +105,9 @@ public class JavaRecord2Schema {
             throw new RecordTypeConversionException(
                     "Recursive collections not supported in annotated 1-level structures");
         }
+        if (parametized.isMap()) {
+            return createMapType(fieldName, parametized.getParametizedAsMap(), visited, REPEATED);
+        }
         Class<?> type = parametized.getActualType();
         return buildTypeElement(type, visited, REPEATED, fieldName);
     }
@@ -118,6 +121,9 @@ public class JavaRecord2Schema {
     private Type createCollectionNestedTwoLevel(ParameterizedCollection parametized, Set<Class<?>> visited) {
         if (parametized.isCollection()) {
             return createCollectionType("element", parametized.getParametizedAsCollection(), visited, null, REPEATED);
+        }
+        if (parametized.isMap()) {
+            return createMapType("element", parametized.getParametizedAsMap(), visited, REPEATED);
         }
         Class<?> type = parametized.getActualType();
         return buildTypeElement(type, visited, REPEATED, "element");
@@ -134,13 +140,13 @@ public class JavaRecord2Schema {
             return createCollectionType("element", parametized.getParametizedAsCollection(), visited, null, OPTIONAL);
         }
         if (parametized.isMap()) {
-            return createMap("element", parametized.getParametizedAsMap(), visited, OPTIONAL);
+            return createMapType("element", parametized.getParametizedAsMap(), visited, OPTIONAL);
         }
         Class<?> type = parametized.getActualType();
         return buildTypeElement(type, visited, OPTIONAL, "element");
     }
 
-    private Type createMap(String fieldName, ParameterizedMap parametized, Set<Class<?>> visited,
+    private Type createMapType(String fieldName, ParameterizedMap parametized, Set<Class<?>> visited,
             Repetition repetition) {
         Class<?> keyType = parametized.getKeyActualType();
         Type nestedKey = buildTypeElement(keyType, visited, REQUIRED, "key");
@@ -151,7 +157,7 @@ public class JavaRecord2Schema {
             return Types.map(repetition).key(nestedKey).value(childCollection).named(fieldName);
         }
         if (parametized.valueIsMap()) {
-            Type childMap = createMap("value", parametized.getValueTypeAsMap(), visited, OPTIONAL);
+            Type childMap = createMapType("value", parametized.getValueTypeAsMap(), visited, OPTIONAL);
             return Types.map(repetition).key(nestedKey).value(childMap).named(fieldName);
         }
 

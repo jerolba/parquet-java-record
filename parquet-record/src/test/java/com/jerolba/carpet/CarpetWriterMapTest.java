@@ -114,4 +114,20 @@ public class CarpetWriterMapTest {
         System.out.println(record);
     }
 
+    @Test
+    void simpleMapCompositeKey() throws IOException {
+
+        record ChildRecord(String id, boolean active) {
+
+        }
+        record MainRecord(String name, Map<ChildRecord, String> ids) {
+        }
+
+        var rec = new MainRecord("foo", Map.of(
+                new ChildRecord("Madrid", true), "MAD",
+                new ChildRecord("Barcelona", true), "BCN"));
+        var writerTest = new ParquetWriterTest<>("/tmp/simpleMapCompositeKey.parquet", MainRecord.class);
+        writerTest.write(rec);
+    }
+
 }

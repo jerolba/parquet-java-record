@@ -105,15 +105,15 @@ class MapStructureWriter {
         recordConsumer.endField("key_value", 0);
     }
 
-    private Consumer<Object> createCollectionWriter(ParameterizedCollection collectionClass, RecordField f)
+    private Consumer<Object> createCollectionWriter(ParameterizedCollection collectionClass, RecordField field)
             throws Throwable {
         return switch (carpetConfiguration.annotatedLevels()) {
         case ONE -> new OneLevelStructureWriter(recordConsumer, carpetConfiguration)
-                .createCollectionWriter(collectionClass, f);
+                .createCollectionWriter(collectionClass, field);
         case TWO -> new TwoLevelStructureWriter(recordConsumer, carpetConfiguration)
-                .createCollectionWriter(collectionClass, f);
+                .createCollectionWriter(collectionClass, field);
         case THREE -> new ThreeLevelStructureWriter(recordConsumer, carpetConfiguration)
-                .createCollectionWriter(collectionClass, f);
+                .createCollectionWriter(collectionClass, field);
         };
     }
 }
