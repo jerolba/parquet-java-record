@@ -1,6 +1,6 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl.write;
 
-import static com.jerolba.carpet.SimpleCollectionItemConsumerFactory.buildSimpleElementConsumer;
+import static com.jerolba.carpet.impl.write.SimpleCollectionItemConsumerFactory.buildSimpleElementConsumer;
 
 import java.util.Collection;
 import java.util.function.BiConsumer;
@@ -8,7 +8,12 @@ import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.RecordConsumer;
 
-class TwoLevelStructureWriter {
+import com.jerolba.carpet.CarpetConfiguration;
+import com.jerolba.carpet.RecordTypeConversionException;
+import com.jerolba.carpet.impl.ParameterizedCollection;
+import com.jerolba.carpet.impl.ParameterizedMap;
+
+public class TwoLevelStructureWriter {
 
     private final RecordConsumer recordConsumer;
     private final CarpetConfiguration carpetConfiguration;
@@ -62,7 +67,7 @@ class TwoLevelStructureWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());

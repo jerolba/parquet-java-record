@@ -1,9 +1,9 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-class ParameterizedCollection {
+public class ParameterizedCollection {
 
     private final Type collectionType;
 

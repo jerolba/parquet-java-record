@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.RecordComponent;
 
-class NotNullField {
+public class NotNullField {
 
-    static boolean isNotNull(RecordComponent recordComponent) {
+    public static boolean isNotNull(RecordComponent recordComponent) {
         Annotation[] annotations = recordComponent.getDeclaredAnnotations();
         for (Annotation annotation : annotations) {
             var type = annotation.annotationType();

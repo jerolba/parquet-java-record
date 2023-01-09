@@ -1,9 +1,9 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl.write;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-abstract class FieldWriter implements Consumer<Object> {
+public abstract class FieldWriter implements Consumer<Object> {
 
     protected final RecordField recordField;
     protected final Function<Object, Object> accesor;
@@ -13,7 +13,7 @@ abstract class FieldWriter implements Consumer<Object> {
         this.accesor = Reflection.recordAccessor(recordField.targetClass(), recordField.recordComponent());
     }
 
-    abstract void writeField(Object object);
+    public abstract void writeField(Object object);
 
     @Override
     public void accept(Object object) {

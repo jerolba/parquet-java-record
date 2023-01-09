@@ -1,13 +1,15 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl.write;
 
 import java.util.function.BiConsumer;
 
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
 
-class SimpleCollectionItemConsumerFactory {
+import com.jerolba.carpet.CarpetConfiguration;
 
-    static BiConsumer<RecordConsumer, Object> buildSimpleElementConsumer(Class<?> type,
+public class SimpleCollectionItemConsumerFactory {
+
+    public static BiConsumer<RecordConsumer, Object> buildSimpleElementConsumer(Class<?> type,
             RecordConsumer recordConsumer, CarpetConfiguration carpetConfiguration) throws Throwable {
 
         BiConsumer<RecordConsumer, Object> elemConsumer = null;

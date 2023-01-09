@@ -1,9 +1,9 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl;
 
-import static com.jerolba.carpet.AliasField.getFieldName;
-import static com.jerolba.carpet.NotNullField.isNotNull;
-import static com.jerolba.carpet.Parametized.getParameterizedCollection;
-import static com.jerolba.carpet.Parametized.getParameterizedMap;
+import static com.jerolba.carpet.impl.AliasField.getFieldName;
+import static com.jerolba.carpet.impl.NotNullField.isNotNull;
+import static com.jerolba.carpet.impl.Parametized.getParameterizedCollection;
+import static com.jerolba.carpet.impl.Parametized.getParameterizedMap;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.enumType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.stringType;
 import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BINARY;
@@ -27,6 +27,10 @@ import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Type.Repetition;
+
+import com.jerolba.carpet.CarpetConfiguration;
+import com.jerolba.carpet.RecordTypeConversionException;
+
 import org.apache.parquet.schema.Types;
 
 public class JavaRecord2Schema {

@@ -1,4 +1,4 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -10,6 +10,9 @@ import org.apache.parquet.schema.MessageType;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.jerolba.carpet.AnnotatedLevels;
+import com.jerolba.carpet.CarpetConfiguration;
+import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.record.annotation.Alias;
 import com.jerolba.record.annotation.NotNull;
 

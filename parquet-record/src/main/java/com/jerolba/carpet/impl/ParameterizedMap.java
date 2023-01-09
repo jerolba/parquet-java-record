@@ -1,9 +1,9 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-class ParameterizedMap {
+public class ParameterizedMap {
 
     private final Type keyType;
     private final Type valueType;

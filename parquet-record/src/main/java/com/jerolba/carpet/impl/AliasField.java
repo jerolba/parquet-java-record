@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl;
 
 import java.lang.reflect.RecordComponent;
 
 import com.jerolba.record.annotation.Alias;
 
-class AliasField {
+public class AliasField {
 
-    static String getFieldName(RecordComponent recordComponent) {
+    public static String getFieldName(RecordComponent recordComponent) {
         Alias annotation = recordComponent.getAnnotation(Alias.class);
         if (annotation == null) {
             return recordComponent.getName();

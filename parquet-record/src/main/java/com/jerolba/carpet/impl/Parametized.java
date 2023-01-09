@@ -1,4 +1,4 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
@@ -8,13 +8,15 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.function.Function;
 
-class Parametized {
+import com.jerolba.carpet.RecordTypeConversionException;
 
-    static ParameterizedCollection getParameterizedCollection(RecordComponent attr) {
+public class Parametized {
+
+    public static ParameterizedCollection getParameterizedCollection(RecordComponent attr) {
         return parametizeTo(attr, ParameterizedCollection::new);
     }
 
-    static boolean isCollection(Type type) {
+    public static boolean isCollection(Type type) {
         return typeIsAssignableFrom(type, Collection.class);
     }
 
@@ -22,11 +24,11 @@ class Parametized {
         return parametizeTo(attr, ParameterizedMap::new);
     }
 
-    static boolean isMap(Type type) {
+    public static boolean isMap(Type type) {
         return typeIsAssignableFrom(type, Map.class);
     }
 
-    static Class<?> getClassFromType(Type type, String usageForError) {
+    public static Class<?> getClassFromType(Type type, String usageForError) {
         if ((type instanceof Class<?> finalType)) {
             return finalType;
         }

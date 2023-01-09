@@ -10,6 +10,9 @@ import org.apache.parquet.io.OutputFile;
 import org.apache.parquet.io.api.RecordConsumer;
 import org.apache.parquet.schema.MessageType;
 
+import com.jerolba.carpet.impl.JavaRecord2Schema;
+import com.jerolba.carpet.impl.write.CarpetRecordWriter;
+
 public class CarpetWriter<T> {
 
     public static <T> Builder<T> builder(OutputFile file, Class<T> recordClass) {

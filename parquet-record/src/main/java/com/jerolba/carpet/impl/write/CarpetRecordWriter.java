@@ -1,8 +1,8 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl.write;
 
-import static com.jerolba.carpet.AliasField.getFieldName;
-import static com.jerolba.carpet.Parametized.getParameterizedCollection;
-import static com.jerolba.carpet.Parametized.getParameterizedMap;
+import static com.jerolba.carpet.impl.AliasField.getFieldName;
+import static com.jerolba.carpet.impl.Parametized.getParameterizedCollection;
+import static com.jerolba.carpet.impl.Parametized.getParameterizedMap;
 
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
@@ -13,6 +13,10 @@ import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
+
+import com.jerolba.carpet.CarpetConfiguration;
+import com.jerolba.carpet.impl.ParameterizedCollection;
+import com.jerolba.carpet.impl.ParameterizedMap;
 
 public class CarpetRecordWriter {
 
@@ -111,7 +115,7 @@ public class CarpetRecordWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());
@@ -128,7 +132,7 @@ public class CarpetRecordWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());
@@ -145,7 +149,7 @@ public class CarpetRecordWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());
@@ -162,7 +166,7 @@ public class CarpetRecordWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());
@@ -179,7 +183,7 @@ public class CarpetRecordWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());
@@ -196,7 +200,7 @@ public class CarpetRecordWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());
@@ -213,7 +217,7 @@ public class CarpetRecordWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());
@@ -233,7 +237,7 @@ public class CarpetRecordWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());
@@ -254,7 +258,7 @@ public class CarpetRecordWriter {
         }
 
         @Override
-        void writeField(Object object) {
+        public void writeField(Object object) {
             var value = accesor.apply(object);
             if (value != null) {
                 recordConsumer.startField(recordField.fieldName(), recordField.idx());

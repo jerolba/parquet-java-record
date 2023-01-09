@@ -20,6 +20,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.jerolba.carpet.impl.write.CarpetRecordWriter;
+
 public class CarpetWriterCollectionThreeLevelLog {
 
     @Test

@@ -1,4 +1,4 @@
-package com.jerolba.carpet;
+package com.jerolba.carpet.impl.write;
 
 import org.apache.parquet.io.api.Binary;
 
