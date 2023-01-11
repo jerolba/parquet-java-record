@@ -50,14 +50,15 @@ public class CarpetWriterCollectionOneLevelTest {
         });
     }
 
+    record ChildRecord(String id, boolean active) {
+
+    }
+
+    record MainRecord(String name, List<ChildRecord> ids) {
+    }
+
     @Test
     void simpleCompositeCollection() throws IOException {
-
-        record ChildRecord(String id, boolean active) {
-
-        }
-        record MainRecord(String name, List<ChildRecord> ids) {
-        }
 
         var rec1 = new MainRecord("foo", List.of(new ChildRecord("Madrid", true), new ChildRecord("Sevilla", false)));
         var writerTest = new ParquetWriterTest<>("/tmp/simpleCompositeCollection.parquet", MainRecord.class)

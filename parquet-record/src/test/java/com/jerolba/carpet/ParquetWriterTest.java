@@ -3,10 +3,13 @@ package com.jerolba.carpet;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.hadoop.fs.Path;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.hadoop.ParquetWriter;
@@ -33,6 +36,10 @@ public class ParquetWriterTest<T> {
     }
 
     public void write(T... values) throws IOException {
+        write(List.of(values));
+    }
+
+    public void write(Collection<T> values) throws IOException {
         OutputStreamOutputFile output = new OutputStreamOutputFile(new FileOutputStream(path));
         try (ParquetWriter<T> writer = CarpetWriter.builder(output, type)
                 .levelStructure(level)
@@ -54,5 +61,10 @@ public class ParquetWriterTest<T> {
                 .withDataModel(GenericData.get())
                 .build();
         return reader;
+    }
+
+    public ParquetReader<T> getCarpetReader() throws IOException {
+        Path filePath = new Path(path);
+        return new CarpetReader<T>().read(filePath, type);
     }
 }
