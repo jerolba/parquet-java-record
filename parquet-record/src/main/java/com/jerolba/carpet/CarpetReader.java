@@ -297,8 +297,7 @@ public class CarpetReader<T> {
             LogicalTypeAnnotation logicalType = listElement.getLogicalTypeAnnotation();
             if (logicalType == LogicalTypeAnnotation.listType() && parameterized.isCollection()) {
                 var parameterized2 = parameterized.getParametizedAsCollection();
-                converter = new CarpetListConverter(parameterized2, listElement.asGroupType(),
-                        value -> listHolder.list.add(value));
+                converter = new CarpetListConverter(parameterized2, listElement.asGroupType(), this::consume);
                 return;
             }
             if (parameterized.isMap()) {
@@ -306,7 +305,7 @@ public class CarpetReader<T> {
             }
             GroupType groupType = listElement.asGroupType();
             Class<?> listType = parameterized.getActualType();
-            converter = new CarpetGroupConverter(listType, groupType, value -> listHolder.add(value));
+            converter = new CarpetGroupConverter(listType, groupType, this::consume);
         }
 
         @Override

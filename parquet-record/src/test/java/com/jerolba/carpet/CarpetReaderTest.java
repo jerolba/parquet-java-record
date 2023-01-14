@@ -1,8 +1,9 @@
 package com.jerolba.carpet;
 
+import static java.util.Arrays.asList;
+
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -91,7 +92,7 @@ public class CarpetReaderTest {
         record NestedCollectionPrimitive(String name, List<Integer> sizes) {
         }
 
-        var rec1 = new NestedCollectionPrimitive("foo", Arrays.asList(1, null, 3));
+        var rec1 = new NestedCollectionPrimitive("foo", asList(1, null, 3));
         var rec2 = new NestedCollectionPrimitive("bar", null);
         var writerTest = new ParquetWriterTest<>("/tmp/nestedCollectionPrimitive.parquet",
                 NestedCollectionPrimitive.class);
@@ -107,7 +108,7 @@ public class CarpetReaderTest {
         record NestedCollectionPrimitiveString(String name, List<String> sizes) {
         }
 
-        var rec1 = new NestedCollectionPrimitiveString("foo", List.of("1", "2", "3"));
+        var rec1 = new NestedCollectionPrimitiveString("foo", asList("1", null, "3"));
         var rec2 = new NestedCollectionPrimitiveString("bar", null);
         var writerTest = new ParquetWriterTest<>("/tmp/nestedCollectionPrimitiveString.parquet",
                 NestedCollectionPrimitiveString.class);
@@ -127,7 +128,8 @@ public class CarpetReaderTest {
         record NestedCollectionComposite(String name, List<ChildItem> status) {
         }
 
-        var rec1 = new NestedCollectionComposite("foo", List.of(new ChildItem("1", false), new ChildItem("2", true)));
+        var rec1 = new NestedCollectionComposite("foo",
+                asList(new ChildItem("1", false), null, new ChildItem("2", true)));
         var rec2 = new NestedCollectionComposite("bar", null);
         var writerTest = new ParquetWriterTest<>("/tmp/nestedCollectionComposite.parquet",
                 NestedCollectionComposite.class);
@@ -141,14 +143,13 @@ public class CarpetReaderTest {
     void nestedTwoCollectionComposite() throws IOException {
 
         record ChildItem(String id, boolean active) {
-
         }
 
         record NestedTwoCollectionComposite(String name, List<List<ChildItem>> status) {
         }
 
         var rec1 = new NestedTwoCollectionComposite("foo",
-                List.of(List.of(new ChildItem("1", false), new ChildItem("2", true))));
+                asList(asList(new ChildItem("1", false), null, new ChildItem("2", true)), null));
         var rec2 = new NestedTwoCollectionComposite("bar", null);
         var writerTest = new ParquetWriterTest<>("/tmp/nestedTwoCollectionComposite.parquet",
                 NestedTwoCollectionComposite.class);
