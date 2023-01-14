@@ -7,108 +7,108 @@ import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.Type;
 
 import com.jerolba.carpet.RecordTypeConversionException;
-import com.jerolba.carpet.impl.read.converter.BooleanListConverter;
-import com.jerolba.carpet.impl.read.converter.EnumListConverter;
-import com.jerolba.carpet.impl.read.converter.FromDoubleToDoubleListConverter;
-import com.jerolba.carpet.impl.read.converter.FromDoubleToFloatListConverter;
-import com.jerolba.carpet.impl.read.converter.FromFloatToDoubleListConverter;
-import com.jerolba.carpet.impl.read.converter.FromFloatToFloatListConverter;
-import com.jerolba.carpet.impl.read.converter.FromInt32ToByteListConverter;
-import com.jerolba.carpet.impl.read.converter.FromInt32ToIntegerListConverter;
-import com.jerolba.carpet.impl.read.converter.FromInt32ToLongListConverter;
-import com.jerolba.carpet.impl.read.converter.FromInt32ToShortListConverter;
-import com.jerolba.carpet.impl.read.converter.FromInt64ToByteListConverter;
-import com.jerolba.carpet.impl.read.converter.FromInt64ToIntegerListConverter;
-import com.jerolba.carpet.impl.read.converter.FromInt64ToLongListConverter;
-import com.jerolba.carpet.impl.read.converter.FromInt64ToShortListConverter;
-import com.jerolba.carpet.impl.read.converter.StringListConverter;
+import com.jerolba.carpet.impl.read.converter.BooleanGenericConverter;
+import com.jerolba.carpet.impl.read.converter.EnumGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromDoubleToDoubleGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromDoubleToFloatGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromFloatToDoubleGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromFloatToFloatGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromInt32ToByteGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromInt32ToIntegerGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromInt32ToLongGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromInt32ToShortGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromInt64ToByteGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromInt64ToIntegerGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromInt64ToLongGenericConverter;
+import com.jerolba.carpet.impl.read.converter.FromInt64ToShortGenericConverter;
+import com.jerolba.carpet.impl.read.converter.StringGenericConverter;
 
-public class PrimitiveListConverterFactory {
+public class PrimitiveGenericConverterFactory {
 
-    public static Converter listBuildFromInt64Converter(Consumer<Object> listConsumer, Class<?> type) {
+    public static Converter genericBuildFromInt64Converter(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("int") || typeName.equals("java.lang.Integer")) {
-            return new FromInt64ToIntegerListConverter(listConsumer);
+            return new FromInt64ToIntegerGenericConverter(listConsumer);
         }
         if (typeName.equals("long") || typeName.equals("java.lang.Long")) {
-            return new FromInt64ToLongListConverter(listConsumer);
+            return new FromInt64ToLongGenericConverter(listConsumer);
         }
         if (typeName.equals("short") || typeName.equals("java.lang.Short")) {
-            return new FromInt64ToShortListConverter(listConsumer);
+            return new FromInt64ToShortGenericConverter(listConsumer);
         }
         if (typeName.equals("byte") || typeName.equals("java.lang.Byte")) {
-            return new FromInt64ToByteListConverter(listConsumer);
+            return new FromInt64ToByteGenericConverter(listConsumer);
         }
         throw new RecordTypeConversionException(
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromInt32(Consumer<Object> listConsumer, Class<?> type) {
+    public static Converter genericBuildFromInt32(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("int") || typeName.equals("java.lang.Integer")) {
-            return new FromInt32ToIntegerListConverter(listConsumer);
+            return new FromInt32ToIntegerGenericConverter(listConsumer);
         }
         if (typeName.equals("long") || typeName.equals("java.lang.Long")) {
-            return new FromInt32ToLongListConverter(listConsumer);
+            return new FromInt32ToLongGenericConverter(listConsumer);
         }
         if (typeName.equals("short") || typeName.equals("java.lang.Short")) {
-            return new FromInt32ToShortListConverter(listConsumer);
+            return new FromInt32ToShortGenericConverter(listConsumer);
         }
         if (typeName.equals("byte") || typeName.equals("java.lang.Byte")) {
-            return new FromInt32ToByteListConverter(listConsumer);
+            return new FromInt32ToByteGenericConverter(listConsumer);
         }
         throw new RecordTypeConversionException(
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromDoubleConverter(Consumer<Object> listConsumer, Class<?> type) {
+    public static Converter genericBuildFromDoubleConverter(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("float") || typeName.equals("java.lang.Float")) {
-            return new FromDoubleToFloatListConverter(listConsumer);
+            return new FromDoubleToFloatGenericConverter(listConsumer);
         }
         if (typeName.equals("double") || typeName.equals("java.lang.Double")) {
-            return new FromDoubleToDoubleListConverter(listConsumer);
+            return new FromDoubleToDoubleGenericConverter(listConsumer);
         }
         throw new RecordTypeConversionException(
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromFloatConverter(Consumer<Object> listConsumer, Class<?> type) {
+    public static Converter genericBuildFromFloatConverter(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("float") || typeName.equals("java.lang.Float")) {
-            return new FromFloatToFloatListConverter(listConsumer);
+            return new FromFloatToFloatGenericConverter(listConsumer);
         }
         if (typeName.equals("double") || typeName.equals("java.lang.Double")) {
-            return new FromFloatToDoubleListConverter(listConsumer);
+            return new FromFloatToDoubleGenericConverter(listConsumer);
         }
         throw new RecordTypeConversionException(
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromBooleanConverter(Consumer<Object> listConsumer, Class<?> type) {
+    public static Converter genericBuildFromBooleanConverter(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean")) {
-            return new BooleanListConverter(listConsumer);
+            return new BooleanGenericConverter(listConsumer);
         }
         throw new RecordTypeConversionException(
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromBinaryConverter(Consumer<Object> listConsumer, Class<?> type,
+    public static Converter genericBuildFromBinaryConverter(Consumer<Object> listConsumer, Class<?> type,
             Type schemaType) {
         LogicalTypeAnnotation logicalType = schemaType.getLogicalTypeAnnotation();
         String typeName = type.getName();
         if (logicalType.equals(LogicalTypeAnnotation.stringType())) {
             if (typeName.equals("java.lang.String")) {
-                return new StringListConverter(listConsumer);
+                return new StringGenericConverter(listConsumer);
             }
             throw new RecordTypeConversionException(typeName + " not compatible with String field");
         }
         if (logicalType.equals(LogicalTypeAnnotation.enumType())) {
             if (typeName.equals("java.lang.String")) {
-                return new StringListConverter(listConsumer);
+                return new StringGenericConverter(listConsumer);
             }
-            return new EnumListConverter(listConsumer, type);
+            return new EnumGenericConverter(listConsumer, type);
 
         }
         throw new RecordTypeConversionException(

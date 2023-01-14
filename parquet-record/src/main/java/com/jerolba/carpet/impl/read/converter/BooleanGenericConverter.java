@@ -4,16 +4,16 @@ import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.PrimitiveConverter;
 
-public class FromInt64ToLongListConverter extends PrimitiveConverter {
+public class BooleanGenericConverter extends PrimitiveConverter {
 
     private final Consumer<Object> listConsumer;
 
-    public FromInt64ToLongListConverter(Consumer<Object> listConsumer) {
+    public BooleanGenericConverter(Consumer<Object> listConsumer) {
         this.listConsumer = listConsumer;
     }
 
     @Override
-    public void addLong(long value) {
+    public void addBoolean(boolean value) {
         listConsumer.accept(value);
     }
 

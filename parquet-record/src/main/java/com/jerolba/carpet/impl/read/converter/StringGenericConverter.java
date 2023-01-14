@@ -6,15 +6,13 @@ import org.apache.parquet.column.Dictionary;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.PrimitiveConverter;
 
-public class EnumListConverter extends PrimitiveConverter {
+public class StringGenericConverter extends PrimitiveConverter {
 
-    private Enum<?>[] dict = null;
+    private String[] dict = null;
     private final Consumer<Object> listConsumer;
-    private final Class<? extends Enum> asEnum;
 
-    public EnumListConverter(Consumer<Object> listConsumer, Class<?> type) {
+    public StringGenericConverter(Consumer<Object> listConsumer) {
         this.listConsumer = listConsumer;
-        this.asEnum = type.asSubclass(Enum.class);
     }
 
     @Override
@@ -29,7 +27,7 @@ public class EnumListConverter extends PrimitiveConverter {
 
     @Override
     public void setDictionary(Dictionary dictionary) {
-        dict = new Enum[dictionary.getMaxId() + 1];
+        dict = new String[dictionary.getMaxId() + 1];
         for (int i = 0; i <= dictionary.getMaxId(); i++) {
             dict[i] = convert(dictionary.decodeToBinary(i));
         }
@@ -40,8 +38,7 @@ public class EnumListConverter extends PrimitiveConverter {
         listConsumer.accept(dict[dictionaryId]);
     }
 
-    private Enum<?> convert(Binary value) {
-        String str = value.toStringUsingUTF8();
-        return Enum.valueOf(asEnum, str);
+    private String convert(Binary value) {
+        return value.toStringUsingUTF8();
     }
 }

@@ -4,17 +4,17 @@ import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.PrimitiveConverter;
 
-public class FromFloatToDoubleListConverter extends PrimitiveConverter {
+public class FromFloatToFloatGenericConverter extends PrimitiveConverter {
 
     private final Consumer<Object> listConsumer;
 
-    public FromFloatToDoubleListConverter(Consumer<Object> listConsumer) {
+    public FromFloatToFloatGenericConverter(Consumer<Object> listConsumer) {
         this.listConsumer = listConsumer;
     }
 
     @Override
     public void addFloat(float value) {
-        listConsumer.accept((double) value);
+        listConsumer.accept(value);
     }
 
 }
