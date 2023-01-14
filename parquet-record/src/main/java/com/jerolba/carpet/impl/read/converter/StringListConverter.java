@@ -1,23 +1,23 @@
 package com.jerolba.carpet.impl.read.converter;
 
+import java.util.function.Consumer;
+
 import org.apache.parquet.column.Dictionary;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.PrimitiveConverter;
 
-import com.jerolba.carpet.CarpetReader.ListElementConsumer;
-
 public class StringListConverter extends PrimitiveConverter {
 
     private String[] dict = null;
-    private final ListElementConsumer listConsumer;
+    private final Consumer<Object> listConsumer;
 
-    public StringListConverter(ListElementConsumer listConsumer) {
+    public StringListConverter(Consumer<Object> listConsumer) {
         this.listConsumer = listConsumer;
     }
 
     @Override
     public void addBinary(Binary value) {
-        listConsumer.consume(convert(value));
+        listConsumer.accept(convert(value));
     }
 
     @Override
@@ -35,7 +35,7 @@ public class StringListConverter extends PrimitiveConverter {
 
     @Override
     public void addValueFromDictionary(int dictionaryId) {
-        listConsumer.consume(dict[dictionaryId]);
+        listConsumer.accept(dict[dictionaryId]);
     }
 
     private String convert(Binary value) {

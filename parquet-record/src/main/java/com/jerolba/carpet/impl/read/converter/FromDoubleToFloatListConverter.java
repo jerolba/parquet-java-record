@@ -1,20 +1,20 @@
 package com.jerolba.carpet.impl.read.converter;
 
-import org.apache.parquet.io.api.PrimitiveConverter;
+import java.util.function.Consumer;
 
-import com.jerolba.carpet.CarpetReader.ListElementConsumer;
+import org.apache.parquet.io.api.PrimitiveConverter;
 
 public class FromDoubleToFloatListConverter extends PrimitiveConverter {
 
-    private final ListElementConsumer listConsumer;
+    private final Consumer<Object> listConsumer;
 
-    public FromDoubleToFloatListConverter(ListElementConsumer listConsumer) {
+    public FromDoubleToFloatListConverter(Consumer<Object> listConsumer) {
         this.listConsumer = listConsumer;
     }
 
     @Override
     public void addDouble(double value) {
-        listConsumer.consume((float) value);
+        listConsumer.accept((float) value);
     }
 
 }

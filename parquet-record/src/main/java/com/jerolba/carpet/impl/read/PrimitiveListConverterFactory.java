@@ -1,10 +1,11 @@
 package com.jerolba.carpet.impl.read;
 
+import java.util.function.Consumer;
+
 import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.Type;
 
-import com.jerolba.carpet.CarpetReader.ListElementConsumer;
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.carpet.impl.read.converter.BooleanListConverter;
 import com.jerolba.carpet.impl.read.converter.EnumListConverter;
@@ -24,7 +25,7 @@ import com.jerolba.carpet.impl.read.converter.StringListConverter;
 
 public class PrimitiveListConverterFactory {
 
-    public static Converter listBuildFromInt64Converter(ListElementConsumer listConsumer, Class<?> type) {
+    public static Converter listBuildFromInt64Converter(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("int") || typeName.equals("java.lang.Integer")) {
             return new FromInt64ToIntegerListConverter(listConsumer);
@@ -42,7 +43,7 @@ public class PrimitiveListConverterFactory {
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromInt32(ListElementConsumer listConsumer, Class<?> type) {
+    public static Converter listBuildFromInt32(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("int") || typeName.equals("java.lang.Integer")) {
             return new FromInt32ToIntegerListConverter(listConsumer);
@@ -60,7 +61,7 @@ public class PrimitiveListConverterFactory {
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromDoubleConverter(ListElementConsumer listConsumer, Class<?> type) {
+    public static Converter listBuildFromDoubleConverter(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("float") || typeName.equals("java.lang.Float")) {
             return new FromDoubleToFloatListConverter(listConsumer);
@@ -72,7 +73,7 @@ public class PrimitiveListConverterFactory {
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromFloatConverter(ListElementConsumer listConsumer, Class<?> type) {
+    public static Converter listBuildFromFloatConverter(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("float") || typeName.equals("java.lang.Float")) {
             return new FromFloatToFloatListConverter(listConsumer);
@@ -84,7 +85,7 @@ public class PrimitiveListConverterFactory {
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromBooleanConverter(ListElementConsumer listConsumer, Class<?> type) {
+    public static Converter listBuildFromBooleanConverter(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();
         if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean")) {
             return new BooleanListConverter(listConsumer);
@@ -93,7 +94,7 @@ public class PrimitiveListConverterFactory {
                 typeName + " not compatible with " + type.getName() + " collection");
     }
 
-    public static Converter listBuildFromBinaryConverter(ListElementConsumer listConsumer, Class<?> type,
+    public static Converter listBuildFromBinaryConverter(Consumer<Object> listConsumer, Class<?> type,
             Type schemaType) {
         LogicalTypeAnnotation logicalType = schemaType.getLogicalTypeAnnotation();
         String typeName = type.getName();

@@ -1,20 +1,20 @@
 package com.jerolba.carpet.impl.read.converter;
 
-import org.apache.parquet.io.api.PrimitiveConverter;
+import java.util.function.Consumer;
 
-import com.jerolba.carpet.CarpetReader.ListElementConsumer;
+import org.apache.parquet.io.api.PrimitiveConverter;
 
 public class FromInt64ToShortListConverter extends PrimitiveConverter {
 
-    private final ListElementConsumer listConsumer;
+    private final Consumer<Object> listConsumer;
 
-    public FromInt64ToShortListConverter(ListElementConsumer listConsumer) {
+    public FromInt64ToShortListConverter(Consumer<Object> listConsumer) {
         this.listConsumer = listConsumer;
     }
 
     @Override
     public void addLong(long value) {
-        listConsumer.consume((short) value);
+        listConsumer.accept((short) value);
     }
 
 }

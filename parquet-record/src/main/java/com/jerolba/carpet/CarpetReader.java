@@ -1,6 +1,7 @@
 package com.jerolba.carpet;
 
 import static com.jerolba.carpet.impl.Parametized.getParameterizedCollection;
+import static com.jerolba.carpet.impl.Parametized.getParameterizedMap;
 import static com.jerolba.carpet.impl.read.PrimitiveConverterFactory.buildFromBinaryConverter;
 import static com.jerolba.carpet.impl.read.PrimitiveConverterFactory.buildFromBooleanConverter;
 import static com.jerolba.carpet.impl.read.PrimitiveConverterFactory.buildFromDoubleConverter;
@@ -20,6 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +44,7 @@ import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Type.Repetition;
 
 import com.jerolba.carpet.impl.ParameterizedCollection;
+import com.jerolba.carpet.impl.ParameterizedMap;
 import com.jerolba.carpet.impl.read.GroupFieldsMapper;
 
 public class CarpetReader<T> {
@@ -134,7 +137,9 @@ public class CarpetReader<T> {
                         converters[cont] = new CarpetListConverter(parameterized, asGroupType,
                                 value -> constructor.c[index] = value);
                     } else if (logicalType == LogicalTypeAnnotation.mapType()) {
-
+                        var parameterized = getParameterizedMap(recordComponent);
+                        converters[cont] = new CarpetMapConverter(parameterized, asGroupType,
+                                value -> constructor.c[index] = value);
                     } else {
                         Class<?> childClass = recordComponent.getType();
                         CarpetGroupConverter converter = new CarpetGroupConverter(childClass, asGroupType,
@@ -269,11 +274,7 @@ public class CarpetReader<T> {
 
     }
 
-    public interface ListElementConsumer {
-        void consume(Object value);
-    }
-
-    static class CarpetListIntermediateConverter extends GroupConverter implements ListElementConsumer {
+    static class CarpetListIntermediateConverter extends GroupConverter {
 
         private final Converter converter;
         private final ListHolder listHolder;
@@ -284,7 +285,6 @@ public class CarpetReader<T> {
             System.out.println(requestedSchema);
             this.listHolder = listHolder;
 
-            // Discover converters
             List<Type> fields = requestedSchema.getFields();
             if (fields.size() > 1) {
                 throw new RecordTypeConversionException(
@@ -293,21 +293,24 @@ public class CarpetReader<T> {
             Type listElement = fields.get(0);
             String name = listElement.getName();
             if (listElement.isPrimitive()) {
-                converter = buildPrimitiveListConverters(listElement, this, parameterized);
+                converter = buildPrimitiveListConverters(listElement, parameterized.getActualType(), this::accept);
                 return;
             }
             LogicalTypeAnnotation logicalType = listElement.getLogicalTypeAnnotation();
             if (logicalType == LogicalTypeAnnotation.listType() && parameterized.isCollection()) {
                 var parameterized2 = parameterized.getParametizedAsCollection();
-                converter = new CarpetListConverter(parameterized2, listElement.asGroupType(), this::consume);
+                converter = new CarpetListConverter(parameterized2, listElement.asGroupType(), this::accept);
                 return;
             }
-            if (parameterized.isMap()) {
-                throw new RuntimeException("TODO MAP TYPE");
+            if (logicalType == LogicalTypeAnnotation.mapType() && parameterized.isMap()) {
+                var parameterizedValue = parameterized.getParametizedAsMap();
+                converter = new CarpetMapConverter(parameterizedValue, listElement.asGroupType(), this::accept);
+                return;
+
             }
             GroupType groupType = listElement.asGroupType();
             Class<?> listType = parameterized.getActualType();
-            converter = new CarpetGroupConverter(listType, groupType, this::consume);
+            converter = new CarpetGroupConverter(listType, groupType, this::accept);
         }
 
         @Override
@@ -325,8 +328,139 @@ public class CarpetReader<T> {
             listHolder.add(elementValue);
         }
 
+        public void accept(Object value) {
+            elementValue = value;
+        }
+
+    }
+
+    public interface MapElementsConsumer {
+        void consumeKey(Object value);
+
+        void consumeValue(Object value);
+    }
+
+    static class CarpetMapConverter extends GroupConverter {
+
+        private final Consumer<Object> groupConsumer;
+        private final Converter converter;
+        private final MapHolder mapHolder;
+
+        public CarpetMapConverter(ParameterizedMap parameterized, GroupType requestedSchema,
+                Consumer<Object> groupConsumer) {
+            this.groupConsumer = groupConsumer;
+            this.mapHolder = new MapHolder();
+            System.out.println(requestedSchema);
+
+            // Discover converters
+            List<Type> fields = requestedSchema.getFields();
+            if (fields.size() > 1) {
+                throw new RecordTypeConversionException(
+                        requestedSchema.getName() + " MAP can not have more than one field");
+            }
+            Type mapChild = fields.get(0);
+            String name = mapChild.getName();
+            Repetition repetition = mapChild.getRepetition();
+            converter = new CarpetMapIntermediateConverter(parameterized, mapChild.asGroupType(), mapHolder);
+        }
+
         @Override
-        public void consume(Object value) {
+        public Converter getConverter(int fieldIndex) {
+            return converter;
+        }
+
+        @Override
+        public void start() {
+            mapHolder.start();
+        }
+
+        @Override
+        public void end() {
+            Object currentRecord = mapHolder.create();
+            groupConsumer.accept(currentRecord);
+        }
+
+    }
+
+    static class CarpetMapIntermediateConverter extends GroupConverter {
+
+        private final Converter converterValue;
+        private final Converter converterKey;
+        private final MapHolder mapHolder;
+        private Object elementValue;
+        private Object elementKey;
+
+        public CarpetMapIntermediateConverter(ParameterizedMap parameterized, GroupType requestedSchema,
+                MapHolder mapHolder) {
+            System.out.println(requestedSchema);
+            this.mapHolder = mapHolder;
+
+            List<Type> fields = requestedSchema.getFields();
+            if (fields.size() != 2) {
+                throw new RecordTypeConversionException(
+                        requestedSchema.getName() + " MAP child element must have two fields");
+            }
+
+            // Key
+            Type mapKeyType = fields.get(0);
+            if (mapKeyType.isPrimitive()) {
+                converterKey = buildPrimitiveListConverters(mapKeyType, parameterized.getKeyActualType(),
+                        this::consumeKey);
+            } else {
+                GroupType mapKeyGroupType = mapKeyType.asGroupType();
+                Class<?> mapKeyActualType = parameterized.getKeyActualType();
+                converterKey = new CarpetGroupConverter(mapKeyActualType, mapKeyGroupType, this::consumeKey);
+            }
+
+            // Value
+            Type mapValueType = fields.get(1);
+            if (mapValueType.isPrimitive()) {
+                converterValue = buildPrimitiveListConverters(mapValueType, parameterized.getValueActualType(),
+                        this::consumeValue);
+                return;
+            }
+            LogicalTypeAnnotation logicalType = mapValueType.getLogicalTypeAnnotation();
+            if (logicalType == LogicalTypeAnnotation.listType() && parameterized.valueIsCollection()) {
+                var parameterizedValue = parameterized.getValueTypeAsCollection();
+                converterValue = new CarpetListConverter(parameterizedValue, mapValueType.asGroupType(),
+                        this::consumeValue);
+                return;
+            }
+            if (logicalType == LogicalTypeAnnotation.mapType() && parameterized.valueIsMap()) {
+                var parameterizedValue = parameterized.getValueTypeAsMap();
+                converterValue = new CarpetMapConverter(parameterizedValue, mapValueType.asGroupType(),
+                        this::consumeValue);
+                return;
+            }
+            GroupType mapValueGroupType = mapValueType.asGroupType();
+            Class<?> mapValueActualType = parameterized.getValueActualType();
+            converterValue = new CarpetGroupConverter(mapValueActualType, mapValueGroupType, this::consumeValue);
+        }
+
+        @Override
+        public Converter getConverter(int fieldIndex) {
+            if (fieldIndex == 0) {
+                return converterKey;
+            }
+            return converterValue;
+        }
+
+        @Override
+        public void start() {
+            elementKey = null;
+            elementValue = null;
+        }
+
+        @Override
+        public void end() {
+            mapHolder.put(elementKey, elementValue);
+        }
+
+        public void consumeKey(Object value) {
+            elementKey = value;
+        }
+
+        public void consumeValue(Object value) {
             elementValue = value;
         }
 
@@ -356,23 +490,22 @@ public class CarpetReader<T> {
         throw new RecordTypeConversionException(type + " deserialization not supported");
     }
 
-    private static Converter buildPrimitiveListConverters(Type parquetField, ListElementConsumer listConsumer,
-            ParameterizedCollection parameterized) {
+    private static Converter buildPrimitiveListConverters(Type parquetField, Class<?> genericType,
+            Consumer<Object> listConsumer) {
         PrimitiveTypeName type = parquetField.asPrimitiveType().getPrimitiveTypeName();
-        Class<?> listType = parameterized.getActualType();
         switch (type) {
         case INT32:
-            return listBuildFromInt32(listConsumer, listType);
+            return listBuildFromInt32(listConsumer, genericType);
         case INT64:
-            return listBuildFromInt64Converter(listConsumer, listType);
+            return listBuildFromInt64Converter(listConsumer, genericType);
         case FLOAT:
-            return listBuildFromFloatConverter(listConsumer, listType);
+            return listBuildFromFloatConverter(listConsumer, genericType);
         case DOUBLE:
-            return listBuildFromDoubleConverter(listConsumer, listType);
+            return listBuildFromDoubleConverter(listConsumer, genericType);
         case BOOLEAN:
-            return listBuildFromBooleanConverter(listConsumer, listType);
+            return listBuildFromBooleanConverter(listConsumer, genericType);
         case BINARY:
-            return listBuildFromBinaryConverter(listConsumer, listType, parquetField);
+            return listBuildFromBinaryConverter(listConsumer, genericType, parquetField);
         case INT96, FIXED_LEN_BYTE_ARRAY:
             throw new RecordTypeConversionException(type + " deserialization not supported");
         }
@@ -415,6 +548,24 @@ public class CarpetReader<T> {
 
         public void add(Object value) {
             this.list.add(value);
+        }
+
+    }
+
+    public static class MapHolder {
+
+        public Map<Object, Object> map;
+
+        public void start() {
+            map = new HashMap<>();
+        }
+
+        public Object create() {
+            return map;
+        }
+
+        public void put(Object key, Object value) {
+            this.map.put(key, value);
         }
 
     }

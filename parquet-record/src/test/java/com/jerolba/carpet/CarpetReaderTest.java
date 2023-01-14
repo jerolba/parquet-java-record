@@ -4,7 +4,9 @@ import static java.util.Arrays.asList;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -177,6 +179,39 @@ public class CarpetReaderTest {
     }
 
     @Test
+    void nestedCollectionMap() throws IOException {
+
+        record NestedCollectionMap(String name, List<Map<String, Boolean>> status) {
+        }
+
+        var rec1 = new NestedCollectionMap("even",
+                asList(Map.of("1", false, "2", true), null, Map.of("3", false, "4", true)));
+        var rec2 = new NestedCollectionMap("bar", null);
+        var writerTest = new ParquetWriterTest<>("/tmp/nestedCollectionMap.parquet",
+                NestedCollectionMap.class);
+        writerTest.write(rec1, rec2);
+        var reader = writerTest.getCarpetReader();
+        System.out.println(reader.read());
+        System.out.println(reader.read());
+    }
+
+    @Test
+    void nestedTwoCollectionPrimitive() throws IOException {
+
+        record NestedTwoCollectionPrimitive(String name, List<List<Integer>> status) {
+        }
+
+        var rec1 = new NestedTwoCollectionPrimitive("foo", asList(asList(1, null, 3), null));
+        var rec2 = new NestedTwoCollectionPrimitive("bar", null);
+        var writerTest = new ParquetWriterTest<>("/tmp/NestedTwoCollectionPrimitive.parquet",
+                NestedTwoCollectionPrimitive.class);
+        writerTest.write(rec1, rec2);
+        var reader = writerTest.getCarpetReader();
+        System.out.println(reader.read());
+        System.out.println(reader.read());
+    }
+
+    @Test
     void nestedTwoCollectionComposite() throws IOException {
 
         record ChildItem(String id, boolean active) {
@@ -197,14 +232,121 @@ public class CarpetReaderTest {
     }
 
     @Test
+    void nestedMapStringKeyPrimitiveValue() throws IOException {
+
+        record NestedMapStringKeyPrimitiveValue(String name, Map<String, Integer> sizes) {
+        }
+
+        Map<String, Integer> map = new HashMap<>(Map.of("one", 1, "three", 3));
+        map.put("two", null);
+        var rec1 = new NestedMapStringKeyPrimitiveValue("foo", map);
+        var rec2 = new NestedMapStringKeyPrimitiveValue("bar", null);
+        var writerTest = new ParquetWriterTest<>("/tmp/nestedMapStringKeyPrimitiveValue.parquet",
+                NestedMapStringKeyPrimitiveValue.class);
+        writerTest.write(rec1, rec2);
+        var reader = writerTest.getCarpetReader();
+        System.out.println(reader.read());
+        System.out.println(reader.read());
+    }
+
+    @Test
+    void nestedMapStringKeyStringValue() throws IOException {
+
+        record NestedMapStringKeyStringValue(String name, Map<String, String> sizes) {
+        }
+
+        Map<String, String> map = new HashMap<>(Map.of("one", "1", "three", "3"));
+        map.put("two", null);
+        var rec1 = new NestedMapStringKeyStringValue("foo", map);
+        var rec2 = new NestedMapStringKeyStringValue("bar", null);
+        var writerTest = new ParquetWriterTest<>("/tmp/nestedMapStringKeyPrimitiveKey.parquet",
+                NestedMapStringKeyStringValue.class);
+        writerTest.write(rec1, rec2);
+        var reader = writerTest.getCarpetReader();
+        System.out.println(reader.read());
+        System.out.println(reader.read());
+    }
+
+    @Test
+    void nestedMapPrimitiveKeyRecordValue() throws IOException {
+
+        record ChildMap(String id, double value) {
+        }
+        record NestedMapPrimitiveKeyRecordValue(String name, Map<Integer, ChildMap> metrics) {
+        }
+
+        Map<Integer, ChildMap> map = new HashMap<>(Map.of(1, new ChildMap("Madrid", 12.0),
+                3, new ChildMap("Bilbao", 23.0)));
+        map.put(2, null);
+        var rec1 = new NestedMapPrimitiveKeyRecordValue("foo", map);
+        var rec2 = new NestedMapPrimitiveKeyRecordValue("bar", null);
+        var writerTest = new ParquetWriterTest<>("/tmp/nestedMapPrimitiveKeyRecordValue.parquet",
+                NestedMapPrimitiveKeyRecordValue.class);
+        writerTest.write(rec1, rec2);
+        var reader = writerTest.getCarpetReader();
+        System.out.println(reader.read());
+        System.out.println(reader.read());
+    }
+
+    @Test
+    void nestedMapPrimitiveKeyListPrimitiveValue() throws IOException {
+
+        record NestedMapPrimitiveKeyListPrimitiveValue(String name, Map<Short, List<Integer>> metrics) {
+        }
+
+        Map<Short, List<Integer>> map = new HashMap<>(Map.of((short) 1, List.of(1, 2, 3),
+                (short) 3, List.of(4, 5, 6)));
+        map.put((short) 2, null);
+        var rec1 = new NestedMapPrimitiveKeyListPrimitiveValue("foo", map);
+        var rec2 = new NestedMapPrimitiveKeyListPrimitiveValue("bar", null);
+        var writerTest = new ParquetWriterTest<>("/tmp/nestedMapPrimitiveKeyListPrimitiveValue.parquet",
+                NestedMapPrimitiveKeyListPrimitiveValue.class);
+        writerTest.write(rec1, rec2);
+        var reader = writerTest.getCarpetReader();
+        System.out.println(reader.read());
+        System.out.println(reader.read());
+    }
+
+    @Test
+    void nestedMapRecordKeyMapValue() throws IOException {
+
+        enum Category {
+            one, two, three;
+        }
+
+        record CompositeKey(String a, String b) {
+
+        }
+
+        record NestedMapRecordKeyMapValue(String name, Map<CompositeKey, Map<Category, String>> metrics) {
+        }
+
+        Map<CompositeKey, Map<Category, String>> map = new HashMap<>(Map.of(
+                new CompositeKey("A", "B"), Map.of(Category.one, "ONE", Category.two, "TWO")));
+        map.put(new CompositeKey("B", "C"), null);
+        var rec1 = new NestedMapRecordKeyMapValue("foo", map);
+        var rec2 = new NestedMapRecordKeyMapValue("bar", null);
+        var writerTest = new ParquetWriterTest<>("/tmp/nestedMapRecordKeyMapValue.parquet",
+                NestedMapRecordKeyMapValue.class);
+        writerTest.write(rec1, rec2);
+        var reader = writerTest.getCarpetReader();
+        System.out.println(reader.read());
+        System.out.println(reader.read());
+    }
+
+    @Test
     void foooTypes() throws IOException {
 
-        record FooType(String name, int id) {
+        enum Category {
+            one, two, three
+        }
+
+        record FooType(String name, int id, Category category) {
         }
 
         List<FooType> lst = new ArrayList<>();
         for (int i = 0; i < 1000; i++) {
-            lst.add(new FooType(i + "", 10));
+            lst.add(new FooType(i + "", 10, Category.one));
         }
         var writerTest = new ParquetWriterTest<>("/tmp/FooType.parquet", FooType.class);
         writerTest.write(lst);

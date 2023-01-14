@@ -101,10 +101,12 @@ public class MapStructureWriter {
             recordConsumer.endField("key", 0);
 
             // TODO: review null?
-            recordConsumer.startField("value", 1);
-            innerValueStructureWriter.accept(recordConsumer, v.getValue());
-            recordConsumer.endField("value", 1);
-
+            var mapValue = v.getValue();
+            if (mapValue != null) {
+                recordConsumer.startField("value", 1);
+                innerValueStructureWriter.accept(recordConsumer, mapValue);
+                recordConsumer.endField("value", 1);
+            }
             recordConsumer.endGroup();
         }
         recordConsumer.endField("key_value", 0);

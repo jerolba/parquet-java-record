@@ -1,20 +1,20 @@
 package com.jerolba.carpet.impl.read.converter;
 
-import org.apache.parquet.io.api.PrimitiveConverter;
+import java.util.function.Consumer;
 
-import com.jerolba.carpet.CarpetReader.ListElementConsumer;
+import org.apache.parquet.io.api.PrimitiveConverter;
 
 public class FromInt32ToLongListConverter extends PrimitiveConverter {
 
-    private final ListElementConsumer listConsumer;
+    private final Consumer<Object> listConsumer;
 
-    public FromInt32ToLongListConverter(ListElementConsumer listConsumer) {
+    public FromInt32ToLongListConverter(Consumer<Object> listConsumer) {
         this.listConsumer = listConsumer;
     }
 
     @Override
     public void addInt(int value) {
-        listConsumer.consume((long) value);
+        listConsumer.accept((long) value);
     }
 
 }
