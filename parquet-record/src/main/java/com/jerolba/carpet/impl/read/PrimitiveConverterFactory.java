@@ -9,6 +9,7 @@ import org.apache.parquet.schema.Type;
 import com.jerolba.carpet.CarpetReader.ConstructorParams;
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.carpet.impl.read.converter.BooleanConverter;
+import com.jerolba.carpet.impl.read.converter.EnumConverter;
 import com.jerolba.carpet.impl.read.converter.FromDoubleToDoubleConverter;
 import com.jerolba.carpet.impl.read.converter.FromDoubleToFloatConverter;
 import com.jerolba.carpet.impl.read.converter.FromFloatToDoubleConverter;
@@ -105,17 +106,24 @@ public class PrimitiveConverterFactory {
 
     public static Converter buildFromBinaryConverter(ConstructorParams constructor, int index,
             RecordComponent recordComponent, Type schemaType) {
+        Class<?> type = recordComponent.getType();
+        String typeName = type.getName();
         LogicalTypeAnnotation logicalType = schemaType.getLogicalTypeAnnotation();
         if (logicalType.equals(LogicalTypeAnnotation.stringType())) {
-            Class<?> type = recordComponent.getType();
-            String typeName = type.getName();
             if (typeName.equals("java.lang.String")) {
                 return new StringConverter(constructor, index);
             }
+            throw new RecordTypeConversionException(typeName + " not compatible with String field");
+        }
+        if (logicalType.equals(LogicalTypeAnnotation.enumType())) {
+            if (typeName.equals("java.lang.String")) {
+                return new StringConverter(constructor, index);
+            }
+            return new EnumConverter(constructor, index, recordComponent.getType());
+
         }
         throw new RecordTypeConversionException(
-                recordComponent.getType().getName() + " not compatible with " + recordComponent.getName()
-                        + " field");
+                typeName + " not compatible with " + recordComponent.getName() + " field");
     }
 
 }

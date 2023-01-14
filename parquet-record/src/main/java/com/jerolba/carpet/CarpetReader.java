@@ -70,7 +70,9 @@ public class CarpetReader<T> {
                 MessageType fileSchema) {
 
             // TODO: match class schema with file schema to make the projection
-            List<Type> list = fileSchema.getFields().stream().filter(f -> !f.getName().equals("category")).toList();
+            // List<Type> list = fileSchema.getFields().stream().filter(f ->
+            // !f.getName().equals("category")).toList();
+            List<Type> list = fileSchema.getFields();
 
             MessageType projection = new MessageType(fileSchema.getName(), list);
             Map<String, String> metadata = new LinkedHashMap<>();

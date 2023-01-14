@@ -7,6 +7,7 @@ import org.apache.parquet.schema.Type;
 import com.jerolba.carpet.CarpetReader.ListElementConsumer;
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.carpet.impl.read.converter.BooleanListConverter;
+import com.jerolba.carpet.impl.read.converter.EnumListConverter;
 import com.jerolba.carpet.impl.read.converter.FromDoubleToDoubleListConverter;
 import com.jerolba.carpet.impl.read.converter.FromDoubleToFloatListConverter;
 import com.jerolba.carpet.impl.read.converter.FromFloatToDoubleListConverter;
@@ -95,14 +96,22 @@ public class PrimitiveListConverterFactory {
     public static Converter listBuildFromBinaryConverter(ListElementConsumer listConsumer, Class<?> type,
             Type schemaType) {
         LogicalTypeAnnotation logicalType = schemaType.getLogicalTypeAnnotation();
+        String typeName = type.getName();
         if (logicalType.equals(LogicalTypeAnnotation.stringType())) {
-            String typeName = type.getName();
             if (typeName.equals("java.lang.String")) {
                 return new StringListConverter(listConsumer);
             }
+            throw new RecordTypeConversionException(typeName + " not compatible with String field");
+        }
+        if (logicalType.equals(LogicalTypeAnnotation.enumType())) {
+            if (typeName.equals("java.lang.String")) {
+                return new StringListConverter(listConsumer);
+            }
+            return new EnumListConverter(listConsumer, type);
+
         }
         throw new RecordTypeConversionException(
-                type.getName() + " not compatible with " + schemaType.getName() + " field");
+                typeName + " not compatible with " + schemaType.getName() + " field");
     }
 
 }

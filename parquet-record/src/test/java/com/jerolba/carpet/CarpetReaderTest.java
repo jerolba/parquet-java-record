@@ -53,6 +53,23 @@ public class CarpetReaderTest {
     }
 
     @Test
+    void enumType() throws IOException {
+        enum Category {
+            one, two, tree;
+        }
+
+        record EnumType(String name, Category category) {
+        }
+        var rec1 = new EnumType("foo", Category.one);
+        var rec2 = new EnumType("bar", null);
+        var writerTest = new ParquetWriterTest<>("/tmp/enumType.parquet", EnumType.class);
+        writerTest.write(rec1, rec2);
+        var reader = writerTest.getCarpetReader();
+        System.out.println(reader.read());
+        System.out.println(reader.read());
+    }
+
+    @Test
     void nestedRecord() throws IOException {
 
         record Nested(String id, int value) {
@@ -112,6 +129,26 @@ public class CarpetReaderTest {
         var rec2 = new NestedCollectionPrimitiveString("bar", null);
         var writerTest = new ParquetWriterTest<>("/tmp/nestedCollectionPrimitiveString.parquet",
                 NestedCollectionPrimitiveString.class);
+        writerTest.write(rec1, rec2);
+        var reader = writerTest.getCarpetReader();
+        System.out.println(reader.read());
+        System.out.println(reader.read());
+    }
+
+    @Test
+    void nestedCollectionPrimitiveEnum() throws IOException {
+
+        enum Category {
+            one, two, three
+        }
+
+        record NestedCollectionPrimitiveEnum(String name, List<Category> category) {
+        }
+
+        var rec1 = new NestedCollectionPrimitiveEnum("foo", asList(Category.one, null, Category.three));
+        var rec2 = new NestedCollectionPrimitiveEnum("bar", null);
+        var writerTest = new ParquetWriterTest<>("/tmp/NestedCollectionPrimitiveEnum.parquet",
+                NestedCollectionPrimitiveEnum.class);
         writerTest.write(rec1, rec2);
         var reader = writerTest.getCarpetReader();
         System.out.println(reader.read());
