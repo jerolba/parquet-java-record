@@ -15,7 +15,7 @@ public class FromInt64ToIntegerConverter extends PrimitiveConverter {
     }
 
     @Override
-    public void addInt(int value) {
+    public void addLong(long value) {
         constructor.c[idx] = (int) value;
     }
 

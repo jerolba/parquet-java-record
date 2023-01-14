@@ -20,6 +20,7 @@ import com.jerolba.carpet.impl.read.converter.FromInt32ToShortConverter;
 import com.jerolba.carpet.impl.read.converter.FromInt64ToByteConverter;
 import com.jerolba.carpet.impl.read.converter.FromInt64ToIntegerConverter;
 import com.jerolba.carpet.impl.read.converter.FromInt64ToLongConverter;
+import com.jerolba.carpet.impl.read.converter.FromInt64ToShortConverter;
 import com.jerolba.carpet.impl.read.converter.StringConverter;
 
 public class PrimitiveConverterFactory {
@@ -35,7 +36,7 @@ public class PrimitiveConverterFactory {
             return new FromInt64ToLongConverter(constructor, index);
         }
         if (typeName.equals("short") || typeName.equals("java.lang.Short")) {
-            return new FromInt32ToShortConverter(constructor, index);
+            return new FromInt64ToShortConverter(constructor, index);
         }
         if (typeName.equals("byte") || typeName.equals("java.lang.Byte")) {
             return new FromInt64ToByteConverter(constructor, index);

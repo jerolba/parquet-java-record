@@ -86,10 +86,12 @@ public class ThreeLevelStructureWriter {
         Collection<?> coll = (Collection<?>) value;
         for (var v : coll) {
             recordConsumer.startGroup();
-            recordConsumer.startField("element", 0);
             // TODO: review null?
-            innerStructureWriter.accept(recordConsumer, v);
-            recordConsumer.endField("element", 0);
+            if (v != null) {
+                recordConsumer.startField("element", 0);
+                innerStructureWriter.accept(recordConsumer, v);
+                recordConsumer.endField("element", 0);
+            }
             recordConsumer.endGroup();
         }
         recordConsumer.endField("list", 0);
