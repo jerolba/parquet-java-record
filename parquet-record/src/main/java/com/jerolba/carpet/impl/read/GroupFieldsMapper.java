@@ -6,7 +6,7 @@ import java.util.Map;
 
 import com.jerolba.carpet.impl.AliasField;
 
-public class GroupFieldsMapper {
+class GroupFieldsMapper {
 
     private final Class<?> recordClass;
     private final Map<String, Integer> fieldIndex = new HashMap<>();

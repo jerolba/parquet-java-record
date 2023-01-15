@@ -24,7 +24,7 @@ import com.jerolba.carpet.impl.read.converter.FromInt64ToLongConverter;
 import com.jerolba.carpet.impl.read.converter.FromInt64ToShortConverter;
 import com.jerolba.carpet.impl.read.converter.StringConverter;
 
-public class PrimitiveConverterFactory {
+class PrimitiveConverterFactory {
 
     public static Converter buildPrimitiveConverters(Type parquetField, ReadReflection.ConstructorParams constructor,
             int index,

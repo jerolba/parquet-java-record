@@ -12,7 +12,7 @@ import com.jerolba.carpet.AnnotatedLevels;
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.carpet.impl.ParameterizedCollection;
 
-public class CarpetListConverter extends GroupConverter {
+class CarpetListConverter extends GroupConverter {
 
     private final Consumer<Object> groupConsumer;
     private final Converter converter;

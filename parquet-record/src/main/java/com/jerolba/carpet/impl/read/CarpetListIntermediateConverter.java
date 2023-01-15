@@ -32,7 +32,8 @@ class CarpetListIntermediateConverter extends GroupConverter {
         }
         Type listElement = fields.get(0);
         if (listElement.isPrimitive()) {
-            converter = PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters(listElement, parameterized.getActualType(), this::accept);
+            converter = PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters(listElement,
+                    parameterized.getActualType(), this::accept);
             return;
         }
         LogicalTypeAnnotation logicalType = listElement.getLogicalTypeAnnotation();

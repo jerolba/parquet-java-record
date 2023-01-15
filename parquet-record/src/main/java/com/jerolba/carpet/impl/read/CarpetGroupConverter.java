@@ -14,7 +14,6 @@ import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
 
 import com.jerolba.carpet.RecordTypeConversionException;
-import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 
 public class CarpetGroupConverter extends GroupConverter {
 
@@ -41,7 +40,8 @@ public class CarpetGroupConverter extends GroupConverter {
             }
 
             if (schemaField.isPrimitive()) {
-                converters[cont] = PrimitiveConverterFactory.buildPrimitiveConverters(schemaField, constructor, index, recordComponent);
+                converters[cont] = PrimitiveConverterFactory.buildPrimitiveConverters(schemaField, constructor, index,
+                        recordComponent);
             } else {
                 GroupType asGroupType = schemaField.asGroupType();
                 LogicalTypeAnnotation logicalType = asGroupType.getLogicalTypeAnnotation();

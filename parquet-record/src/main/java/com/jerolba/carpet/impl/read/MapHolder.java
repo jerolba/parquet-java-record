@@ -3,7 +3,7 @@ package com.jerolba.carpet.impl.read;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MapHolder {
+class MapHolder {
 
     public Map<Object, Object> map;
 

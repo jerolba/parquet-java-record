@@ -11,7 +11,7 @@ import org.apache.parquet.schema.Type;
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.carpet.impl.ParameterizedMap;
 
-public class CarpetMapConverter extends GroupConverter {
+class CarpetMapConverter extends GroupConverter {
 
     private final Consumer<Object> groupConsumer;
     private final Converter converter;

@@ -19,13 +19,14 @@ import com.jerolba.record.annotation.NotNull;
 class JavaRecord2SchemaTest {
 
     private final CarpetConfiguration default3Levels = new CarpetConfiguration(AnnotatedLevels.THREE);
+    private final JavaRecord2Schema defaultConfigSchema = new JavaRecord2Schema(default3Levels);
 
     @Test
     void simpleRecordTest() {
         record SimpleRecord(long id, String name) {
         }
 
-        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(SimpleRecord.class);
+        MessageType schema = defaultConfigSchema.createSchema(SimpleRecord.class);
         String expected = """
                 message SimpleRecord {
                   required int64 id;
@@ -41,7 +42,7 @@ class JavaRecord2SchemaTest {
                 short shortValue, byte byteValue, boolean booleanValue) {
         }
 
-        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(PrimitiveTypesRecord.class);
+        MessageType schema = defaultConfigSchema.createSchema(PrimitiveTypesRecord.class);
         String expected = """
                 message PrimitiveTypesRecord {
                   required int64 longValue;
@@ -62,7 +63,7 @@ class JavaRecord2SchemaTest {
                 Short shortValue, Byte byteValue, Boolean booleanValue) {
         }
 
-        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(PrimitiveObjectsTypesRecord.class);
+        MessageType schema = defaultConfigSchema.createSchema(PrimitiveObjectsTypesRecord.class);
         String expected = """
                 message PrimitiveObjectsTypesRecord {
                   optional int64 longValue;
@@ -82,7 +83,7 @@ class JavaRecord2SchemaTest {
         record FieldAliasRecord(long id, @Alias("nombre") String name) {
         }
 
-        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(FieldAliasRecord.class);
+        MessageType schema = defaultConfigSchema.createSchema(FieldAliasRecord.class);
         String expected = """
                 message FieldAliasRecord {
                   required int64 id;
@@ -97,7 +98,7 @@ class JavaRecord2SchemaTest {
         record NotNullFieldRecord(@NotNull Long id, @NotNull String name) {
         }
 
-        MessageType schema = new JavaRecord2Schema(default3Levels).createSchema(NotNullFieldRecord.class);
+        MessageType schema = defaultConfigSchema.createSchema(NotNullFieldRecord.class);
         String expected = """
                 message NotNullFieldRecord {
                   required int64 id;
@@ -110,7 +111,7 @@ class JavaRecord2SchemaTest {
     @Nested
     class SimpleComposition {
 
-        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(default3Levels);
+        private final JavaRecord2Schema schemaFactory = defaultConfigSchema;
 
         @Test
         void simpleParentChildRecordTest() {
@@ -189,8 +190,6 @@ class JavaRecord2SchemaTest {
     @Nested
     class EnumTypes {
 
-        private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(default3Levels);
-
         enum Status {
             ACTIVE, INACTIVE, DELETED
         }
@@ -200,7 +199,7 @@ class JavaRecord2SchemaTest {
             record WithEnum(long id, String name, Status status) {
             }
 
-            MessageType schema = schemaFactory.createSchema(WithEnum.class);
+            MessageType schema = defaultConfigSchema.createSchema(WithEnum.class);
             String expected = """
                     message WithEnum {
                       required int64 id;
@@ -216,7 +215,7 @@ class JavaRecord2SchemaTest {
             record WithNotNullEnum(long id, String name, @NotNull @Alias("state") Status status) {
             }
 
-            MessageType schema = schemaFactory.createSchema(WithNotNullEnum.class);
+            MessageType schema = defaultConfigSchema.createSchema(WithNotNullEnum.class);
             String expected = """
                     message WithNotNullEnum {
                       required int64 id;

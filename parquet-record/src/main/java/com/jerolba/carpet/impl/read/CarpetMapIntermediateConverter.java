@@ -14,7 +14,7 @@ import org.apache.parquet.schema.Type;
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.carpet.impl.ParameterizedMap;
 
-public class CarpetMapIntermediateConverter extends GroupConverter {
+class CarpetMapIntermediateConverter extends GroupConverter {
 
     private final Converter converterValue;
     private final Converter converterKey;
@@ -36,7 +36,8 @@ public class CarpetMapIntermediateConverter extends GroupConverter {
         // Key
         Type mapKeyType = fields.get(0);
         if (mapKeyType.isPrimitive()) {
-            converterKey = PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters(mapKeyType, parameterized.getKeyActualType(),
+            converterKey = PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters(mapKeyType,
+                    parameterized.getKeyActualType(),
                     this::consumeKey);
         } else {
             GroupType mapKeyGroupType = mapKeyType.asGroupType();

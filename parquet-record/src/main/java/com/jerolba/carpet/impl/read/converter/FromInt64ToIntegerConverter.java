@@ -3,7 +3,6 @@ package com.jerolba.carpet.impl.read.converter;
 import org.apache.parquet.io.api.PrimitiveConverter;
 
 import com.jerolba.carpet.impl.read.ReadReflection;
-import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 
 public class FromInt64ToIntegerConverter extends PrimitiveConverter {
 

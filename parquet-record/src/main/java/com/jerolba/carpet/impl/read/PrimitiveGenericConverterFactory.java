@@ -24,7 +24,7 @@ import com.jerolba.carpet.impl.read.converter.FromInt64ToLongGenericConverter;
 import com.jerolba.carpet.impl.read.converter.FromInt64ToShortGenericConverter;
 import com.jerolba.carpet.impl.read.converter.StringGenericConverter;
 
-public class PrimitiveGenericConverterFactory {
+class PrimitiveGenericConverterFactory {
 
     public static Converter buildPrimitiveGenericConverters(Type parquetField, Class<?> genericType,
             Consumer<Object> listConsumer) {

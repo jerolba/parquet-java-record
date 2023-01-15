@@ -3,7 +3,7 @@ package com.jerolba.carpet.impl.read;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ListHolder {
+class ListHolder {
 
     public List<Object> list;
 
