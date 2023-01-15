@@ -58,10 +58,11 @@ public class ParquetWriterTest<T> {
     public void writeAndAssertReadIsEquals(T... values) throws IOException {
         List<T> asList = List.of(values);
         write(asList);
-        Iterator<T> readIterator = getReadIterator();
+        ParquetReader<T> reader = getCarpetReader();
         int i = 0;
-        while (readIterator.hasNext()) {
-            assertEquals(asList.get(i), readIterator.next());
+        T read = null;
+        while ((read = reader.read()) != null) {
+            assertEquals(asList.get(i), read);
             i++;
         }
     }
