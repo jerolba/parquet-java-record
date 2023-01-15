@@ -4,16 +4,17 @@ import org.apache.parquet.column.Dictionary;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.PrimitiveConverter;
 
-import com.jerolba.carpet.CarpetReader.ConstructorParams;
+import com.jerolba.carpet.impl.read.ReadReflection;
+import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 
 public class EnumConverter extends PrimitiveConverter {
 
     private Enum<?>[] dict = null;
-    private final ConstructorParams constructor;
+    private final ReadReflection.ConstructorParams constructor;
     private final int idx;
     private final Class<? extends Enum> asEnum;
 
-    public EnumConverter(ConstructorParams constructor, int idx, Class<?> type) {
+    public EnumConverter(ReadReflection.ConstructorParams constructor, int idx, Class<?> type) {
         this.constructor = constructor;
         this.idx = idx;
         this.asEnum = type.asSubclass(Enum.class);

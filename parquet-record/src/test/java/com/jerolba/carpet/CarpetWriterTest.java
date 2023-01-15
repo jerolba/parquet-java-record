@@ -15,96 +15,378 @@
  */
 package com.jerolba.carpet;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.NoSuchElementException;
 
-import org.apache.parquet.hadoop.ParquetWriter;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.jerolba.parquet.record.OutputStreamOutputFile;
+class CarpetWriterTest {
 
-public class CarpetWriterTest {
+    @Nested
+    class SimpleTypes {
 
-    public record SimpleType(String name, int intPrimitive, Integer intObject, short a, Byte b) {
-    }
+        @Test
+        void intPrimitive() throws IOException {
 
-    @Test
-    void simpleType() throws IOException {
-        var rec1 = new SimpleType("foo", 1, 2, (short) 4, (byte) 123);
-        var rec2 = new SimpleType(null, 3, null, (short) 6, null);
-        var writerTest = new ParquetWriterTest<>("/tmp/simpleType.parquet", SimpleType.class);
-        writerTest.write(rec1, rec2);
-        var it = writerTest.getReadIterator();
-        System.out.println(it.next());
-        System.out.println(it.next());
-    }
+            record IntPrimitive(int value) {
+            }
 
-    public record PrimitivesAndObjects(String name,
-            int intPrimitive, Integer intObject,
-            long longPrimitive, Long longObject,
-            float floatPrimitive, Float floatObject,
-            double doublePrimitive, Double doubleObject,
-            boolean booleanPrimitive, Boolean booleanObject) {
+            var rec1 = new IntPrimitive(1);
+            var rec2 = new IntPrimitive(2);
+            var writerTest = new ParquetWriterTest<>(IntPrimitive.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void longPrimitive() throws IOException {
+
+            record LongPrimitive(long value) {
+            }
+
+            var rec1 = new LongPrimitive(191919191919L);
+            var rec2 = new LongPrimitive(292929292929L);
+            var writerTest = new ParquetWriterTest<>(LongPrimitive.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void doublePrimitive() throws IOException {
+
+            record DoublePrimitive(double value) {
+            }
+
+            var rec1 = new DoublePrimitive(1.9);
+            var rec2 = new DoublePrimitive(2.9);
+            var writerTest = new ParquetWriterTest<>(DoublePrimitive.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void floatPrimitive() throws IOException {
+
+            record FloatPrimitive(float value) {
+            }
+
+            var rec1 = new FloatPrimitive(1.9f);
+            var rec2 = new FloatPrimitive(2.9f);
+            var writerTest = new ParquetWriterTest<>(FloatPrimitive.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void shortPrimitive() throws IOException {
+
+            record ShortPrimitive(short value) {
+            }
+
+            var rec1 = new ShortPrimitive((short) 1);
+            var rec2 = new ShortPrimitive((short) 2);
+            var writerTest = new ParquetWriterTest<>(ShortPrimitive.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void bytePrimitive() throws IOException {
+
+            record BytePrimitive(byte value) {
+            }
+
+            var rec1 = new BytePrimitive((byte) 1);
+            var rec2 = new BytePrimitive((byte) 2);
+            var writerTest = new ParquetWriterTest<>(BytePrimitive.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void booleanPrimitive() throws IOException {
+
+            record BooleanPrimitive(boolean value) {
+            }
+
+            var rec1 = new BooleanPrimitive(true);
+            var rec2 = new BooleanPrimitive(false);
+            var writerTest = new ParquetWriterTest<>(BooleanPrimitive.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void integerObject() throws IOException {
+
+            record IntegerObject(Integer value) {
+            }
+
+            var rec1 = new IntegerObject(1);
+            var rec2 = new IntegerObject(2);
+            var writerTest = new ParquetWriterTest<>(IntegerObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void longObject() throws IOException {
+
+            record LongObject(Long value) {
+            }
+
+            var rec1 = new LongObject(191919191919L);
+            var rec2 = new LongObject(292929292929L);
+            var writerTest = new ParquetWriterTest<>(LongObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void doubleObject() throws IOException {
+
+            record DoubleObject(Double value) {
+            }
+
+            var rec1 = new DoubleObject(1.9);
+            var rec2 = new DoubleObject(2.9);
+            var writerTest = new ParquetWriterTest<>(DoubleObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void floatObject() throws IOException {
+
+            record FloatObject(Float value) {
+            }
+
+            var rec1 = new FloatObject(1.9f);
+            var rec2 = new FloatObject(2.9f);
+            var writerTest = new ParquetWriterTest<>(FloatObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void shortObject() throws IOException {
+
+            record ShortObject(Short value) {
+            }
+
+            var rec1 = new ShortObject((short) 1);
+            var rec2 = new ShortObject((short) 2);
+            var writerTest = new ParquetWriterTest<>(ShortObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void byteObject() throws IOException {
+
+            record ByteObject(Byte value) {
+            }
+
+            var rec1 = new ByteObject((byte) 1);
+            var rec2 = new ByteObject((byte) 2);
+            var writerTest = new ParquetWriterTest<>(ByteObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void booleanObject() throws IOException {
+
+            record BooleanObject(Boolean value) {
+            }
+
+            var rec1 = new BooleanObject(true);
+            var rec2 = new BooleanObject(false);
+            var writerTest = new ParquetWriterTest<>(BooleanObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void stringObject() throws IOException {
+
+            record StringObject(String value) {
+            }
+
+            var rec1 = new StringObject("Madrid");
+            var rec2 = new StringObject("Zaragoza");
+            var writerTest = new ParquetWriterTest<>(StringObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void enumObject() throws IOException {
+
+            enum Category {
+                one, two, three;
+            }
+
+            record EnumObject(Category value) {
+            }
+
+            var rec1 = new EnumObject(Category.one);
+            var rec2 = new EnumObject(Category.two);
+            var writerTest = new ParquetWriterTest<>(EnumObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void integerNullObject() throws IOException {
+
+            record IntegerNullObject(Integer value) {
+            }
+
+            var rec1 = new IntegerNullObject(1);
+            var rec2 = new IntegerNullObject(null);
+            var writerTest = new ParquetWriterTest<>(IntegerNullObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void longNullObject() throws IOException {
+
+            record LongNullObject(Long value) {
+            }
+
+            var rec1 = new LongNullObject(191919191919L);
+            var rec2 = new LongNullObject(null);
+            var writerTest = new ParquetWriterTest<>(LongNullObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void doubleNullObject() throws IOException {
+
+            record DoubleNullObject(Double value) {
+            }
+
+            var rec1 = new DoubleNullObject(1.9);
+            var rec2 = new DoubleNullObject(null);
+            var writerTest = new ParquetWriterTest<>(DoubleNullObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void floatNullObject() throws IOException {
+
+            record FloatNullObject(Float value) {
+            }
+
+            var rec1 = new FloatNullObject(1.9f);
+            var rec2 = new FloatNullObject(null);
+            var writerTest = new ParquetWriterTest<>(FloatNullObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void shortNullObject() throws IOException {
+
+            record ShortNullObject(Short value) {
+            }
+
+            var rec1 = new ShortNullObject((short) 1);
+            var rec2 = new ShortNullObject(null);
+            var writerTest = new ParquetWriterTest<>(ShortNullObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void byteNullObject() throws IOException {
+
+            record ByteNullObject(Byte value) {
+            }
+
+            var rec1 = new ByteNullObject((byte) 1);
+            var rec2 = new ByteNullObject(null);
+            var writerTest = new ParquetWriterTest<>(ByteNullObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void booleanNullObject() throws IOException {
+
+            record BooleanNullObject(Boolean value) {
+            }
+
+            var rec1 = new BooleanNullObject(true);
+            var rec2 = new BooleanNullObject(null);
+            var writerTest = new ParquetWriterTest<>(BooleanNullObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void stringNullObject() throws IOException {
+
+            record StringNullObject(String value) {
+            }
+
+            var rec1 = new StringNullObject("Madrid");
+            var rec2 = new StringNullObject(null);
+            var writerTest = new ParquetWriterTest<>(StringNullObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
+
+        @Test
+        void enumNullObject() throws IOException {
+
+            enum Category {
+                one, two, three;
+            }
+
+            record EnumNullObject(Category value) {
+            }
+
+            var rec1 = new EnumNullObject(Category.one);
+            var rec2 = new EnumNullObject(null);
+            var writerTest = new ParquetWriterTest<>(EnumNullObject.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
+        }
     }
 
     @Test
     void emptyFile() throws IOException {
-        var writerTest = new ParquetWriterTest<>("/tmp/emptyFile.parquet", PrimitivesAndObjects.class);
-        writerTest.write();
 
+        record EmptyFile(String someValue) {
+
+        }
+        var writerTest = new ParquetWriterTest<>(EmptyFile.class);
+        writerTest.write();
         var it = writerTest.getReadIterator();
         assertFalse(it.hasNext());
         assertThrows(NoSuchElementException.class, () -> it.next());
     }
 
     @Test
-    void basicTypes() throws IOException {
-        var rec = new PrimitivesAndObjects("foo", 1, 2, 3L, 4L, 5.0F, 6.0F, 7.0, 8.0, true, true);
-        var writerTest = new ParquetWriterTest<>("/tmp/primitivesAndObjectsWrite.parquet", PrimitivesAndObjects.class);
-        writerTest.write(rec);
+    void classWithMultipleFields() throws IOException {
 
-        PrimitivesAndObjects value = writerTest.getReadIterator().next();
-        assertEquals(rec, value);
-    }
+        enum Category {
+            one, two, three;
+        }
 
-    @Test
-    void basicTypesNulls() throws IOException {
-        var rec = new PrimitivesAndObjects(null, 2, null, 4L, null, 6.0F, null, 8.0, null, true, null);
-        var writerTest = new ParquetWriterTest<>("/tmp/primitivesAndNullObjectsWrite.parquet",
-                PrimitivesAndObjects.class);
-        writerTest.write(rec);
+        record ClassWithMultipleFields(String name, Category category,
+                int p1, Integer f1, long p2, Long f2, double p3, Double f3, float p4, Float f4,
+                byte p5, Byte f5, short p6, Short f6, boolean p7, Boolean f7) {
+        }
 
-        PrimitivesAndObjects value = writerTest.getReadIterator().next();
-        assertEquals(rec, value);
+        var rec1 = new ClassWithMultipleFields("Apple", Category.one,
+                1, 2, 3L, 4L, 5.1, 6.2, 7.3f, 8.4f,
+                (byte) 9, (byte) 10, (short) 11, (short) 12, true, false);
+        var rec2 = new ClassWithMultipleFields(null, null,
+                101, null, 103L, null, 105.1, null, 107.3f, null,
+                (byte) 109, null, (short) 1011, null, false, null);
+        var writerTest = new ParquetWriterTest<>(ClassWithMultipleFields.class);
+        writerTest.writeAndAssertReadIsEquals(rec1, rec2);
     }
 
     @Nested
-    class EnumWriting {
-
-        public enum OrgType {
-            FOO, BAR, BAZ
-        }
-
-        public record WithEnum(String name, OrgType orgType) {
-
-        }
+    class GenericFieldsAreNotSupported {
 
         @Test
-        void withEnums() throws IOException {
-            var rec1 = new WithEnum("Apple", OrgType.FOO);
-            var rec2 = new WithEnum("Google", null);
-            var writerTest = new ParquetWriterTest<>("/tmp/withEnum.parquet", WithEnum.class);
-            writerTest.write(rec1, rec2);
+        void classWithGenericField() throws IOException {
 
-            var it = writerTest.getReadIterator();
-            assertEquals(rec1, it.next());
-            assertEquals(rec2, it.next());
+            record ClassWithGenericField<T>(String name, T value) {
+            }
+
+            var rec1 = new ClassWithGenericField<>("Apple", 1);
+            var rec2 = new ClassWithGenericField<>("Google", 2);
+            var writerTest = new ParquetWriterTest<>(ClassWithGenericField.class);
+            assertThrows(RecordTypeConversionException.class,
+                    () -> writerTest.writeAndAssertReadIsEquals(rec1, rec2));
         }
 
     }
@@ -112,45 +394,57 @@ public class CarpetWriterTest {
     @Nested
     class CompositedClasses {
 
-        public record CompositeChild(String id, int value) {
-        }
-
-        public record CompositeMain(String name, CompositeChild child) {
-        }
-
         @Test
         void compositeValue() throws IOException {
-            CompositeChild child = new CompositeChild("Amount", 100);
-            CompositeMain rec = new CompositeMain("Amazon", child);
 
-            var writerTest = new ParquetWriterTest<>("/tmp/compositeMain.parquet", CompositeMain.class);
-            writerTest.write(rec);
+            record Child(String id, int value) {
+            }
 
-            CompositeMain value = writerTest.getReadIterator().next();
-            assertEquals(rec, value);
+            record CompositeMain(String name, Child child) {
+            }
+
+            CompositeMain rec1 = new CompositeMain("Madrid", new Child("Population", 100));
+            CompositeMain rec2 = new CompositeMain("Santander", new Child("Population", 200));
+
+            var writerTest = new ParquetWriterTest<>(CompositeMain.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
         }
 
         @Test
-        void compositeValueWithNull() throws IOException {
-            CompositeMain rec = new CompositeMain("Amazon", null);
+        void compositeNullValue() throws IOException {
+            record Child(String id, int value) {
+            }
 
-            var writerTest = new ParquetWriterTest<>("/tmp/compositeMainWithNull.parquet", CompositeMain.class);
-            writerTest.write(rec);
+            record CompositeNullMain(String name, Child child) {
+            }
 
-            CompositeMain value = writerTest.getReadIterator().next();
-            assertEquals(rec, value);
-        }
+            CompositeNullMain rec1 = new CompositeNullMain("Madrid", new Child("Age", 100));
+            CompositeNullMain rec2 = new CompositeNullMain("Santander", null);
 
-        public record CompositeGeneric<T>(String name, T child) {
+            var writerTest = new ParquetWriterTest<>(CompositeNullMain.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2);
         }
 
         @Test
-        void genericCompositeNotSupported() throws IOException {
-            var output = new OutputStreamOutputFile(new FileOutputStream("/tmp/notsupported.parquet"));
-            assertThrows(RecordTypeConversionException.class, () -> {
-                try (var writer = CarpetWriter.builder(output, CompositeGeneric.class).build()) {
-                }
-            });
+        void compositeGenericNotSupported() throws IOException {
+
+            interface Some {
+                String id();
+            }
+
+            record Child(String id, int value) implements Some {
+            }
+
+            // Just for testing, Record types are final and can not be extended
+            record CompositeGeneric<T extends Some>(String name, T child) {
+            }
+
+            CompositeGeneric<Some> rec1 = new CompositeGeneric<>("Madrid", new Child("Age", 100));
+            CompositeGeneric<Some> rec2 = new CompositeGeneric<>("Santander", null);
+
+            var writerTest = new ParquetWriterTest<>(CompositeGeneric.class);
+            assertThrows(RecordTypeConversionException.class,
+                    () -> writerTest.writeAndAssertReadIsEquals(rec1, rec2));
         }
 
         public record RecursiveLoop(String id, RercursiveMain recursive) {
@@ -164,35 +458,36 @@ public class CarpetWriterTest {
 
         @Test
         void recursiveCompositeNotSupported() throws IOException {
-            var output = new OutputStreamOutputFile(new FileOutputStream("/tmp/notsupported.parquet"));
-            assertThrows(RuntimeException.class, () -> {
-                try (ParquetWriter<RecursiveLoop> writer = CarpetWriter.builder(output, RecursiveLoop.class)
-                        .build()) {
-                }
+
+            RercursiveMain tail = new RercursiveMain("Tail", null);
+            RecursiveLoop child2 = new RecursiveLoop("Level 3", tail);
+            RecursiveChild child = new RecursiveChild("Level 2", child2);
+            RercursiveMain main = new RercursiveMain("Level 1", child);
+
+            var writerTest = new ParquetWriterTest<>(RercursiveMain.class);
+            assertThrows(RecordTypeConversionException.class, () -> {
+                writerTest.writeAndAssertReadIsEquals(main, tail);
             });
-        }
-
-        public record FirstLevel(String id, SecondLevel child) {
-
-        }
-
-        public record SecondLevel(String name, ThirdLevel child) {
-
-        }
-
-        public record ThirdLevel(String name, long value) {
-
         }
 
         @Test
         void multipleLevelComposition() throws IOException {
-            FirstLevel rec = new FirstLevel("Amazon", new SecondLevel("Spain", new ThirdLevel("Aragón", 201020)));
 
-            var writerTest = new ParquetWriterTest<>("/tmp/multipleLevel.parquet", FirstLevel.class);
-            writerTest.write(rec);
+            record ThirdLevel(String name, long value) {
+            }
+            record SecondLevel(String name, ThirdLevel child) {
+            }
+            record MultipleLevelComposition(String id, SecondLevel child) {
+            }
 
-            FirstLevel value = writerTest.getReadIterator().next();
-            assertEquals(rec, value);
+            MultipleLevelComposition rec1 = new MultipleLevelComposition("First",
+                    new SecondLevel("Second", new ThirdLevel("Third", 20102032L)));
+            MultipleLevelComposition rec2 = new MultipleLevelComposition("One",
+                    new SecondLevel("Two", null));
+            MultipleLevelComposition rec3 = new MultipleLevelComposition("Uno", null);
+
+            var writerTest = new ParquetWriterTest<>(MultipleLevelComposition.class);
+            writerTest.writeAndAssertReadIsEquals(rec1, rec2, rec3);
         }
 
     }

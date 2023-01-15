@@ -2,14 +2,15 @@ package com.jerolba.carpet.impl.read.converter;
 
 import org.apache.parquet.io.api.PrimitiveConverter;
 
-import com.jerolba.carpet.CarpetReader.ConstructorParams;
+import com.jerolba.carpet.impl.read.ReadReflection;
+import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 
 public class FromInt32ToByteConverter extends PrimitiveConverter {
 
-    private final ConstructorParams constructor;
+    private final ReadReflection.ConstructorParams constructor;
     private final int idx;
 
-    public FromInt32ToByteConverter(ConstructorParams constructor, int idx) {
+    public FromInt32ToByteConverter(ReadReflection.ConstructorParams constructor, int idx) {
         this.constructor = constructor;
         this.idx = idx;
     }

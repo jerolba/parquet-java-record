@@ -4,6 +4,7 @@ import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
+import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type;
 
 import com.jerolba.carpet.RecordTypeConversionException;
@@ -24,6 +25,28 @@ import com.jerolba.carpet.impl.read.converter.FromInt64ToShortGenericConverter;
 import com.jerolba.carpet.impl.read.converter.StringGenericConverter;
 
 public class PrimitiveGenericConverterFactory {
+
+    public static Converter buildPrimitiveGenericConverters(Type parquetField, Class<?> genericType,
+            Consumer<Object> listConsumer) {
+        PrimitiveTypeName type = parquetField.asPrimitiveType().getPrimitiveTypeName();
+        switch (type) {
+        case INT32:
+            return genericBuildFromInt32(listConsumer, genericType);
+        case INT64:
+            return genericBuildFromInt64Converter(listConsumer, genericType);
+        case FLOAT:
+            return genericBuildFromFloatConverter(listConsumer, genericType);
+        case DOUBLE:
+            return genericBuildFromDoubleConverter(listConsumer, genericType);
+        case BOOLEAN:
+            return genericBuildFromBooleanConverter(listConsumer, genericType);
+        case BINARY:
+            return genericBuildFromBinaryConverter(listConsumer, genericType, parquetField);
+        case INT96, FIXED_LEN_BYTE_ARRAY:
+            throw new RecordTypeConversionException(type + " deserialization not supported");
+        }
+        throw new RecordTypeConversionException(type + " deserialization not supported");
+    }
 
     public static Converter genericBuildFromInt64Converter(Consumer<Object> listConsumer, Class<?> type) {
         String typeName = type.getName();

@@ -1,8 +1,11 @@
 package com.jerolba.carpet;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -20,9 +23,22 @@ import com.jerolba.parquet.record.ParquetRecordReader;
 
 public class ParquetWriterTest<T> {
 
-    private final String path;
     private final Class<T> type;
+    private String path;
     private AnnotatedLevels level = AnnotatedLevels.THREE;
+
+    ParquetWriterTest(Class<T> type) {
+        String fileName = type.getName() + ".parquet";
+        this.path = "/tmp/" + fileName;
+        try {
+            java.nio.file.Path targetPath = Files.createTempFile("parquet", fileName);
+            this.path = targetPath.toFile().getAbsolutePath();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.type = type;
+        new File(path).delete();
+    }
 
     ParquetWriterTest(String path, Class<T> type) {
         this.path = path;
@@ -37,6 +53,17 @@ public class ParquetWriterTest<T> {
 
     public void write(T... values) throws IOException {
         write(List.of(values));
+    }
+
+    public void writeAndAssertReadIsEquals(T... values) throws IOException {
+        List<T> asList = List.of(values);
+        write(asList);
+        Iterator<T> readIterator = getReadIterator();
+        int i = 0;
+        while (readIterator.hasNext()) {
+            assertEquals(asList.get(i), readIterator.next());
+            i++;
+        }
     }
 
     public void write(Collection<T> values) throws IOException {
