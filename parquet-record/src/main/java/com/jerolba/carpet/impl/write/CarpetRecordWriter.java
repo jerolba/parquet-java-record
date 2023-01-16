@@ -14,19 +14,19 @@ import java.util.function.Consumer;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
 
-import com.jerolba.carpet.CarpetConfiguration;
+import com.jerolba.carpet.CarpetWriteConfiguration;
 import com.jerolba.carpet.impl.ParameterizedCollection;
 import com.jerolba.carpet.impl.ParameterizedMap;
 
 public class CarpetRecordWriter {
 
     private final RecordConsumer recordConsumer;
-    private final CarpetConfiguration carpetConfiguration;
+    private final CarpetWriteConfiguration carpetConfiguration;
 
     private final List<Consumer<Object>> fieldWriters = new ArrayList<>();
 
     public CarpetRecordWriter(RecordConsumer recordConsumer, Class<?> recordClass,
-            CarpetConfiguration carpetConfiguration) throws Throwable {
+            CarpetWriteConfiguration carpetConfiguration) throws Throwable {
         this.recordConsumer = recordConsumer;
         this.carpetConfiguration = carpetConfiguration;
 

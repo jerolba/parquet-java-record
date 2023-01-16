@@ -28,16 +28,16 @@ import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Type.Repetition;
 
-import com.jerolba.carpet.CarpetConfiguration;
+import com.jerolba.carpet.CarpetWriteConfiguration;
 import com.jerolba.carpet.RecordTypeConversionException;
 
 import org.apache.parquet.schema.Types;
 
 public class JavaRecord2Schema {
 
-    private final CarpetConfiguration carpetConfiguration;
+    private final CarpetWriteConfiguration carpetConfiguration;
 
-    public JavaRecord2Schema(CarpetConfiguration carpetConfiguration) {
+    public JavaRecord2Schema(CarpetWriteConfiguration carpetConfiguration) {
         this.carpetConfiguration = carpetConfiguration;
     }
 

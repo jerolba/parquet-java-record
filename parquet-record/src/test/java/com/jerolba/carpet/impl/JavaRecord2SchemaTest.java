@@ -11,14 +11,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.jerolba.carpet.AnnotatedLevels;
-import com.jerolba.carpet.CarpetConfiguration;
+import com.jerolba.carpet.CarpetWriteConfiguration;
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.record.annotation.Alias;
 import com.jerolba.record.annotation.NotNull;
 
 class JavaRecord2SchemaTest {
 
-    private final CarpetConfiguration default3Levels = new CarpetConfiguration(AnnotatedLevels.THREE);
+    private final CarpetWriteConfiguration default3Levels = new CarpetWriteConfiguration(AnnotatedLevels.THREE);
     private final JavaRecord2Schema defaultConfigSchema = new JavaRecord2Schema(default3Levels);
 
     @Test
@@ -231,7 +231,7 @@ class JavaRecord2SchemaTest {
     @Nested
     class NestedCollection1Level {
 
-        private final CarpetConfiguration oneLevel = new CarpetConfiguration(AnnotatedLevels.ONE);
+        private final CarpetWriteConfiguration oneLevel = new CarpetWriteConfiguration(AnnotatedLevels.ONE);
         private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(oneLevel);
 
         @Test
@@ -312,7 +312,7 @@ class JavaRecord2SchemaTest {
     @Nested
     class NestedCollection2Level {
 
-        private final CarpetConfiguration twoLevel = new CarpetConfiguration(AnnotatedLevels.TWO);
+        private final CarpetWriteConfiguration twoLevel = new CarpetWriteConfiguration(AnnotatedLevels.TWO);
         private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(twoLevel);
 
         @Test
@@ -510,7 +510,7 @@ class JavaRecord2SchemaTest {
     @Nested
     class NestedCollection3Level {
 
-        private final CarpetConfiguration threeLevel = new CarpetConfiguration(AnnotatedLevels.THREE);
+        private final CarpetWriteConfiguration threeLevel = new CarpetWriteConfiguration(AnnotatedLevels.THREE);
         private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(threeLevel);
 
         @Test
@@ -761,7 +761,7 @@ class JavaRecord2SchemaTest {
     @Nested
     class NestedMaps {
 
-        private final CarpetConfiguration twoLevel = new CarpetConfiguration(AnnotatedLevels.THREE);
+        private final CarpetWriteConfiguration twoLevel = new CarpetWriteConfiguration(AnnotatedLevels.THREE);
         private final JavaRecord2Schema schemaFactory = new JavaRecord2Schema(twoLevel);
 
         @Test

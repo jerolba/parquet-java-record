@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.RecordConsumer;
 
-import com.jerolba.carpet.CarpetConfiguration;
+import com.jerolba.carpet.CarpetWriteConfiguration;
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.carpet.impl.ParameterizedCollection;
 import com.jerolba.carpet.impl.ParameterizedMap;
@@ -16,9 +16,9 @@ import com.jerolba.carpet.impl.ParameterizedMap;
 public class MapStructureWriter {
 
     private final RecordConsumer recordConsumer;
-    private final CarpetConfiguration carpetConfiguration;
+    private final CarpetWriteConfiguration carpetConfiguration;
 
-    public MapStructureWriter(RecordConsumer recordConsumer, CarpetConfiguration carpetConfiguration) {
+    public MapStructureWriter(RecordConsumer recordConsumer, CarpetWriteConfiguration carpetConfiguration) {
         this.recordConsumer = recordConsumer;
         this.carpetConfiguration = carpetConfiguration;
     }

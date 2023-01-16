@@ -21,6 +21,9 @@ import java.lang.reflect.RecordComponent;
 public class NotNullField {
 
     public static boolean isNotNull(RecordComponent recordComponent) {
+        if (recordComponent.getType().isPrimitive()) {
+            return true;
+        }
         Annotation[] annotations = recordComponent.getDeclaredAnnotations();
         for (Annotation annotation : annotations) {
             var type = annotation.annotationType();

@@ -1,10 +1,10 @@
 package com.jerolba.carpet;
 
-public class CarpetConfiguration {
+public class CarpetWriteConfiguration {
 
     private final AnnotatedLevels annotatedLevels;
 
-    public CarpetConfiguration(AnnotatedLevels annotatedLevels) {
+    public CarpetWriteConfiguration(AnnotatedLevels annotatedLevels) {
         this.annotatedLevels = annotatedLevels;
     }
 

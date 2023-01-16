@@ -47,7 +47,7 @@ public class CarpetWriter<T> {
 
         @Override
         protected WriteSupport<T> getWriteSupport(Configuration conf) {
-            CarpetConfiguration carpetCfg = new CarpetConfiguration(annotatedLevels);
+            CarpetWriteConfiguration carpetCfg = new CarpetWriteConfiguration(annotatedLevels);
             return new CarpetWriterSupport<>(recordClass, extraMetaData, carpetCfg);
         }
 
@@ -57,11 +57,11 @@ public class CarpetWriter<T> {
 
         private final Class<T> recordClass;
         private final Map<String, String> extraMetaData;
-        private final CarpetConfiguration carpetConfiguration;
+        private final CarpetWriteConfiguration carpetConfiguration;
         private CarpetMessageWriter<T> carpetWriter;
 
         public CarpetWriterSupport(Class<T> recordClass, Map<String, String> extraMetaData,
-                CarpetConfiguration carpetConfiguration) {
+                CarpetWriteConfiguration carpetConfiguration) {
             this.recordClass = recordClass;
             this.extraMetaData = extraMetaData;
             this.carpetConfiguration = carpetConfiguration;
@@ -101,7 +101,7 @@ public class CarpetWriter<T> {
         private final CarpetRecordWriter writer;
 
         CarpetMessageWriter(RecordConsumer recordConsumer, Class<T> recordClass,
-                CarpetConfiguration carpetConfiguration) throws Throwable {
+                CarpetWriteConfiguration carpetConfiguration) throws Throwable {
             this.recordConsumer = recordConsumer;
             this.writer = new CarpetRecordWriter(recordConsumer, recordClass, carpetConfiguration);
         }

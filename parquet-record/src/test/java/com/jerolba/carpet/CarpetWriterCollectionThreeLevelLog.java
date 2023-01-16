@@ -100,7 +100,7 @@ public class CarpetWriterCollectionThreeLevelLog {
         public void write(T... values) throws IOException {
             try {
                 CarpetRecordWriter writer = new CarpetRecordWriter(new TraceRecordConsumer(), type,
-                        new CarpetConfiguration(AnnotatedLevels.THREE));
+                        new CarpetWriteConfiguration(AnnotatedLevels.THREE));
                 for (T t : values) {
                     writer.write(t);
                 }

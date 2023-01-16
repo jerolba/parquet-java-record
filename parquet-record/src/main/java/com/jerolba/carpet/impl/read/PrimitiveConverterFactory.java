@@ -1,5 +1,8 @@
 package com.jerolba.carpet.impl.read;
 
+import static org.apache.parquet.schema.LogicalTypeAnnotation.enumType;
+import static org.apache.parquet.schema.LogicalTypeAnnotation.stringType;
+
 import java.lang.reflect.RecordComponent;
 
 import org.apache.parquet.io.api.Converter;
@@ -134,18 +137,17 @@ class PrimitiveConverterFactory {
         Class<?> type = recordComponent.getType();
         String typeName = type.getName();
         LogicalTypeAnnotation logicalType = schemaType.getLogicalTypeAnnotation();
-        if (logicalType.equals(LogicalTypeAnnotation.stringType())) {
+        if (logicalType.equals(stringType())) {
             if (typeName.equals("java.lang.String")) {
                 return new StringConverter(constructor, index);
             }
             throw new RecordTypeConversionException(typeName + " not compatible with String field");
         }
-        if (logicalType.equals(LogicalTypeAnnotation.enumType())) {
+        if (logicalType.equals(enumType())) {
             if (typeName.equals("java.lang.String")) {
                 return new StringConverter(constructor, index);
             }
             return new EnumConverter(constructor, index, recordComponent.getType());
-
         }
         throw new RecordTypeConversionException(
                 typeName + " not compatible with " + recordComponent.getName() + " field");

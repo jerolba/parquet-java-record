@@ -5,12 +5,12 @@ import java.util.function.BiConsumer;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.RecordConsumer;
 
-import com.jerolba.carpet.CarpetConfiguration;
+import com.jerolba.carpet.CarpetWriteConfiguration;
 
 public class SimpleCollectionItemConsumerFactory {
 
     public static BiConsumer<RecordConsumer, Object> buildSimpleElementConsumer(Class<?> type,
-            RecordConsumer recordConsumer, CarpetConfiguration carpetConfiguration) throws Throwable {
+            RecordConsumer recordConsumer, CarpetWriteConfiguration carpetConfiguration) throws Throwable {
 
         BiConsumer<RecordConsumer, Object> elemConsumer = null;
         String typeName = type.getName();
