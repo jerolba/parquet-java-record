@@ -14,11 +14,11 @@ public class ParameterizedMap {
     }
 
     public Class<?> getValueActualType() {
-        return Parametized.getClassFromType(valueType, "in Map value");
+        return Parameterized.getClassFromType(valueType, "in Map value");
     }
 
     public Class<?> getKeyActualType() {
-        return Parametized.getClassFromType(keyType, "in Map key");
+        return Parameterized.getClassFromType(keyType, "in Map key");
     }
 
     public ParameterizedMap getValueTypeAsMap() {
@@ -36,11 +36,11 @@ public class ParameterizedMap {
     }
 
     public boolean valueIsCollection() {
-        return Parametized.isCollection(valueType);
+        return Parameterized.isCollection(valueType);
     }
 
     public boolean valueIsMap() {
-        return Parametized.isMap(valueType);
+        return Parameterized.isMap(valueType);
     }
 
 }

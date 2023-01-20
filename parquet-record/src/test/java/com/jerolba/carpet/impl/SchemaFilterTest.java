@@ -6,6 +6,10 @@ import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BINARY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.List;
+
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
@@ -397,7 +401,7 @@ class SchemaFilterTest {
     }
 
     @Nested
-    class FieldsMatching {
+    class ParquetFieldsMatchingRecordFields {
 
         @Test
         void fieldsMatch() {
@@ -542,4 +546,233 @@ class SchemaFilterTest {
             assertEquals(groupType, filter.filter(CompositeMain.class));
         }
     }
+
+    @Nested
+    class SimpleClassesAreNotSupported {
+
+        private static class NormalClass {
+            private final String id;
+
+            public NormalClass(String id) {
+                this.id = id;
+            }
+
+            public String getId() {
+                return id;
+            }
+
+        }
+
+        @Test
+        void javaBeanCanNotBeDeserialized() {
+            Type field1 = Types.primitive(BINARY, Repetition.OPTIONAL).as(stringType()).named("id");
+            GroupType groupType = new MessageType("foo", field1);
+
+            SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+            assertThrows(RecordTypeConversionException.class, () -> filter.filter(NormalClass.class));
+        }
+
+        @Test
+        void javaBeanCanNotBePartOfRecord() {
+            Type field1 = Types.primitive(BINARY, Repetition.OPTIONAL).as(stringType()).named("id");
+            Type childField1 = Types.primitive(BINARY, Repetition.OPTIONAL).as(stringType()).named("id");
+            GroupType childGroupType = new GroupType(Repetition.OPTIONAL, "child", childField1);
+            GroupType groupType = new MessageType("foo", field1, childGroupType);
+
+            record ParentClass(String id, NormalClass child) {
+            }
+
+            SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+            assertThrows(RecordTypeConversionException.class, () -> filter.filter(ParentClass.class));
+
+            record ChildRecord(String id) {
+            }
+            record ParentRecord(String id, ChildRecord child) {
+            }
+            assertEquals(groupType, filter.filter(ParentRecord.class));
+        }
+
+        @Test
+        void bigIntegerIsNotSupported() {
+            Type field1 = new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.INT64, "id");
+            GroupType groupType = new MessageType("foo", field1);
+
+            record BigIntegerRecord(BigInteger id) {
+            }
+            SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+            assertThrows(RecordTypeConversionException.class, () -> filter.filter(BigIntegerRecord.class));
+        }
+
+        @Test
+        void bigDecimalIsNotSupported() {
+            Type field1 = new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.DOUBLE, "value");
+            GroupType groupType = new MessageType("foo", field1);
+
+            record BigDecimalRecord(BigDecimal value) {
+            }
+            SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+            assertThrows(RecordTypeConversionException.class, () -> filter.filter(BigDecimalRecord.class));
+        }
+
+    }
+
+    @Nested
+    class Collections {
+
+        Type fieldId = Types.primitive(BINARY, Repetition.OPTIONAL).as(stringType()).named("id");
+        Type fieldName = Types.primitive(BINARY, Repetition.OPTIONAL).as(stringType()).named("name");
+        Type fieldAge = new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.INT32, "age");
+        Type fieldActive = new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.BOOLEAN, "active");
+
+        @Nested
+        class OneLevelCollection {
+
+            @Test
+            void integerCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.INT32, "ids");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record LevelOnePrimitive(String name, List<Integer> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void shortCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.INT32, "ids");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record LevelOnePrimitive(String name, List<Short> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(LevelOnePrimitive.class));
+
+                SchemaFilter filterNonStrict = new SchemaFilter(nonStrictNumericConfig, groupType);
+                assertEquals(groupType, filterNonStrict.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void byteCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.INT32, "ids");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record LevelOnePrimitive(String name, List<Byte> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(LevelOnePrimitive.class));
+
+                SchemaFilter filterNonStrict = new SchemaFilter(nonStrictNumericConfig, groupType);
+                assertEquals(groupType, filterNonStrict.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void longCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.INT64, "ids");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record LevelOnePrimitive(String name, List<Long> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void floatCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.FLOAT, "values");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record LevelOnePrimitive(String name, List<Float> values) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void floatFromDoubleCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.DOUBLE, "values");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record LevelOnePrimitive(String name, List<Float> values) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(LevelOnePrimitive.class));
+
+                SchemaFilter filterNonStrict = new SchemaFilter(nonStrictNumericConfig, groupType);
+                assertEquals(groupType, filterNonStrict.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void doubleCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.DOUBLE, "values");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record LevelOnePrimitive(String name, List<Double> values) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void stringCollection() {
+                Type repeated = Types.primitive(BINARY, Repetition.REPEATED).as(stringType()).named("ids");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+                record LevelOnePrimitive(String name, List<String> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            enum Category {
+                one, two
+            }
+
+            @Test
+            void enumCollection() {
+                Type repeated = Types.primitive(BINARY, Repetition.REPEATED).as(enumType()).named("categories");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+                record LevelOnePrimitive(String name, List<Category> categories) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void enumToStringCollection() {
+                Type repeated = Types.primitive(BINARY, Repetition.REPEATED).as(enumType()).named("categories");
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record LevelOnePrimitive(String name, List<String> categories) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void compositeCollection() {
+                GroupType repeated = new GroupType(Repetition.REPEATED, "child", fieldId, fieldAge);
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record Child(String id, int age) {
+                }
+                record LevelOneComposite(String name, List<Child> child) {
+                }
+
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOneComposite.class));
+            }
+        }
+
+    }
+
 }

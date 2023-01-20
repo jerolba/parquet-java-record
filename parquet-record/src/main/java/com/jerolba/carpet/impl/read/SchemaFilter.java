@@ -1,11 +1,14 @@
 package com.jerolba.carpet.impl.read;
 
 import static com.jerolba.carpet.impl.AliasField.getFieldName;
+import static com.jerolba.carpet.impl.NotNullField.isNotNull;
+import static com.jerolba.carpet.impl.Parameterized.getParameterizedCollection;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.enumType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.stringType;
 
 import java.lang.reflect.RecordComponent;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +21,6 @@ import org.apache.parquet.schema.Type.Repetition;
 
 import com.jerolba.carpet.CarpetReadConfiguration;
 import com.jerolba.carpet.RecordTypeConversionException;
-import com.jerolba.carpet.impl.NotNullField;
 
 public class SchemaFilter {
 
@@ -42,25 +44,66 @@ public class SchemaFilter {
         for (RecordComponent recordComponent : readClass.getRecordComponents()) {
             String name = getFieldName(recordComponent);
             Type parquetType = fieldsByName.get(name);
-            if (parquetType != null) {
-                if (parquetType.isPrimitive()) {
-                    PrimitiveType primitiveType = parquetType.asPrimitiveType();
-                    validatePrimitiveCompatibility(primitiveType, recordComponent);
-                    validateNullability(primitiveType, recordComponent);
-                    inProjection.put(name, parquetType);
-                } else {
-                    GroupType asGroupType = parquetType.asGroupType();
-                    if (recordComponent.getType().isRecord()) {
-                        validateNullability(asGroupType, recordComponent);
-                        SchemaFilter recordFilter = new SchemaFilter(configuration, asGroupType);
-                        GroupType recordSchema = recordFilter.filter(recordComponent.getType());
-                        inProjection.put(name, recordSchema);
-                    }
+            if (parquetType == null) {
+                if (!configuration.isIgnoreUnknown()) {
+                    throw new RecordTypeConversionException(
+                            "Field " + name + " of " + readClass.getName() + " class not found in parquet "
+                                    + schema.getName());
                 }
-            } else if (!configuration.isIgnoreUnknown()) {
-                throw new RecordTypeConversionException(
-                        "Field " + name + " of " + readClass.getName() + " class not found in parquet "
-                                + schema.getName());
+                continue;
+            }
+
+            // Repeated first level
+            if (parquetType.isRepetition(Repetition.REPEATED)) {
+                // Java field must be a collection type
+                if (!Collection.class.isAssignableFrom(recordComponent.getType())) {
+                    throw new RecordTypeConversionException(
+                            "Repeated field " + recordComponent.getName() + " of " + readClass.getName()
+                                    + " is not a collection");
+                }
+                var parameterized = getParameterizedCollection(recordComponent);
+                if (parameterized.isCollection() || parameterized.isMap()) {
+                    // Is Java child recursive collection or map?
+
+                } else if (parquetType.isPrimitive()) {
+                    // if collection type is Java "primitive"
+                    var primitiveType = parquetType.asPrimitiveType();
+                    var actualCollectionType = parameterized.getActualType();
+                    validatePrimitiveCompatibility(primitiveType, actualCollectionType);
+                    inProjection.put(name, parquetType);
+                    continue;
+                } else {
+                    // if collection type is Java "Record"
+                    var asGroupType = parquetType.asGroupType();
+                    var actualCollectionType = parameterized.getActualType();
+                    if (actualCollectionType.isRecord()) {
+                        SchemaFilter recordFilter = new SchemaFilter(configuration, asGroupType);
+                        GroupType recordSchema = recordFilter.filter(actualCollectionType);
+                        inProjection.put(name, recordSchema);
+                        continue;
+                    }
+                    throw new RecordTypeConversionException("Field " + name + " of type "
+                            + actualCollectionType.getName() + " is not a basic type or " + "a Java record");
+                }
+            }
+
+            // Optional or Required
+            if (parquetType.isPrimitive()) {
+                PrimitiveType primitiveType = parquetType.asPrimitiveType();
+                validatePrimitiveCompatibility(primitiveType, recordComponent.getType());
+                validateNullability(primitiveType, recordComponent);
+                inProjection.put(name, parquetType);
+            } else {
+                GroupType asGroupType = parquetType.asGroupType();
+                if (recordComponent.getType().isRecord()) {
+                    validateNullability(asGroupType, recordComponent);
+                    SchemaFilter recordFilter = new SchemaFilter(configuration, asGroupType);
+                    GroupType recordSchema = recordFilter.filter(recordComponent.getType());
+                    inProjection.put(name, recordSchema);
+                } else {
+                    throw new RecordTypeConversionException(
+                            recordComponent.getType().getName() + " is not a Java Record");
+                }
             }
         }
         List<Type> projection = schema.getFields().stream()
@@ -70,8 +113,7 @@ public class SchemaFilter {
         return new GroupType(schema.getRepetition(), schema.getName(), projection);
     }
 
-    private boolean validatePrimitiveCompatibility(PrimitiveType primitiveType, RecordComponent recordComponent) {
-        Class<?> type = recordComponent.getType();
+    private boolean validatePrimitiveCompatibility(PrimitiveType primitiveType, Class<?> type) {
         switch (primitiveType.getPrimitiveTypeName()) {
         case INT32:
             return validInt32Source(primitiveType, type);
@@ -92,7 +134,7 @@ public class SchemaFilter {
     }
 
     private boolean validateNullability(Type parquetType, RecordComponent recordComponent) {
-        boolean isNotNull = NotNullField.isNotNull(recordComponent);
+        boolean isNotNull = isNotNull(recordComponent);
         if (isNotNull && parquetType.getRepetition() == Repetition.OPTIONAL) {
             Class<?> type = recordComponent.getType();
             throw new RecordTypeConversionException(
@@ -187,6 +229,8 @@ public class SchemaFilter {
 
     private boolean throwInvalidConversionException(PrimitiveType primitiveType, Class<?> type) {
         throw new RecordTypeConversionException(
-                primitiveType.getName() + " (" + type.getName() + ") can not be converted to " + type.getName());
+                primitiveType.getPrimitiveTypeName().name() + " (" + primitiveType.getName()
+                        + ") can not be converted to "
+                        + type.getName());
     }
 }

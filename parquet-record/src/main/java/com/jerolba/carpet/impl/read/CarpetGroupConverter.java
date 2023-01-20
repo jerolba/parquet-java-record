@@ -1,7 +1,7 @@
 package com.jerolba.carpet.impl.read;
 
-import static com.jerolba.carpet.impl.Parametized.getParameterizedCollection;
-import static com.jerolba.carpet.impl.Parametized.getParameterizedMap;
+import static com.jerolba.carpet.impl.Parameterized.getParameterizedCollection;
+import static com.jerolba.carpet.impl.Parameterized.getParameterizedMap;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.listType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.mapType;
 

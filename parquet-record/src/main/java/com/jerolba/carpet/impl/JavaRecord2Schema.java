@@ -2,8 +2,8 @@ package com.jerolba.carpet.impl;
 
 import static com.jerolba.carpet.impl.AliasField.getFieldName;
 import static com.jerolba.carpet.impl.NotNullField.isNotNull;
-import static com.jerolba.carpet.impl.Parametized.getParameterizedCollection;
-import static com.jerolba.carpet.impl.Parametized.getParameterizedMap;
+import static com.jerolba.carpet.impl.Parameterized.getParameterizedCollection;
+import static com.jerolba.carpet.impl.Parameterized.getParameterizedMap;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.enumType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.stringType;
 import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BINARY;

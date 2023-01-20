@@ -10,7 +10,7 @@ import java.util.function.Function;
 
 import com.jerolba.carpet.RecordTypeConversionException;
 
-public class Parametized {
+public class Parameterized {
 
     public static ParameterizedCollection getParameterizedCollection(RecordComponent attr) {
         return parametizeTo(attr, ParameterizedCollection::new);

@@ -1,8 +1,8 @@
 package com.jerolba.carpet.impl.write;
 
 import static com.jerolba.carpet.impl.AliasField.getFieldName;
-import static com.jerolba.carpet.impl.Parametized.getParameterizedCollection;
-import static com.jerolba.carpet.impl.Parametized.getParameterizedMap;
+import static com.jerolba.carpet.impl.Parameterized.getParameterizedCollection;
+import static com.jerolba.carpet.impl.Parameterized.getParameterizedMap;
 
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;

@@ -12,7 +12,7 @@ public class ParameterizedCollection {
     }
 
     public Class<?> getActualType() {
-        return Parametized.getClassFromType(collectionType, "in Collection");
+        return Parameterized.getClassFromType(collectionType, "in Collection");
     }
 
     public ParameterizedCollection getParametizedAsCollection() {
@@ -30,11 +30,11 @@ public class ParameterizedCollection {
     }
 
     public boolean isCollection() {
-        return Parametized.isCollection(collectionType);
+        return Parameterized.isCollection(collectionType);
     }
 
     public boolean isMap() {
-        return Parametized.isMap(collectionType);
+        return Parameterized.isMap(collectionType);
     }
 
 }
