@@ -1,5 +1,7 @@
 package com.jerolba.carpet.impl;
 
+import static org.apache.parquet.schema.ConversionPatterns.listOfElements;
+import static org.apache.parquet.schema.ConversionPatterns.listType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.enumType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.stringType;
 import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.BINARY;
@@ -722,6 +724,7 @@ class SchemaFilterTest {
             void stringCollection() {
                 Type repeated = Types.primitive(BINARY, Repetition.REPEATED).as(stringType()).named("ids");
                 GroupType groupType = new MessageType("foo", fieldName, repeated);
+
                 record LevelOnePrimitive(String name, List<String> ids) {
 
                 }
@@ -737,6 +740,7 @@ class SchemaFilterTest {
             void enumCollection() {
                 Type repeated = Types.primitive(BINARY, Repetition.REPEATED).as(enumType()).named("categories");
                 GroupType groupType = new MessageType("foo", fieldName, repeated);
+
                 record LevelOnePrimitive(String name, List<Category> categories) {
 
                 }
@@ -769,8 +773,487 @@ class SchemaFilterTest {
                 SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
                 assertEquals(groupType, filter.filter(LevelOneComposite.class));
             }
+
+            @Test
+            void compositeCollectionMatchFields() {
+                GroupType repeated = new GroupType(Repetition.REPEATED, "child", fieldId, fieldAge, fieldActive);
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                record Child(String id, int age) {
+                }
+                record LevelOneComposite(String name, List<Child> child) {
+                }
+
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                GroupType repeatedExoected = new GroupType(Repetition.REPEATED, "child", fieldId, fieldAge);
+                GroupType groupTypeExpected = new MessageType("foo", fieldName, repeatedExoected);
+                assertEquals(groupTypeExpected, filter.filter(LevelOneComposite.class));
+            }
+
+            @Test
+            void nestedCollectionsAreNotSupported() {
+                GroupType repeatedChild = new GroupType(Repetition.REPEATED, "nested", fieldId, fieldAge);
+                GroupType repeated = new GroupType(Repetition.REPEATED, "list", repeatedChild);
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                record Child(String id, int age) {
+                }
+                record NestedCollections(String name, List<List<Child>> list) {
+                }
+
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(NestedCollections.class));
+
+                record Nested(List<Child> nested) {
+                }
+                record ValidLevelOneComposite(String name, List<Nested> list) {
+                }
+                assertEquals(groupType, filter.filter(ValidLevelOneComposite.class));
+            }
+        }
+
+        @Nested
+        class TwoLevelCollection {
+
+            @Test
+            void integerCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.INT32, "element");
+                GroupType listType = listType(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Integer> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void shortCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.INT32, "element");
+                GroupType listType = listType(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Short> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(LevelTwoPrimitive.class));
+
+                SchemaFilter filterNonStrict = new SchemaFilter(nonStrictNumericConfig, groupType);
+                assertEquals(groupType, filterNonStrict.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void byteCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.INT32, "element");
+                GroupType listType = listType(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Byte> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(LevelTwoPrimitive.class));
+
+                SchemaFilter filterNonStrict = new SchemaFilter(nonStrictNumericConfig, groupType);
+                assertEquals(groupType, filterNonStrict.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void longCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.INT64, "element");
+                GroupType listType = listType(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Long> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void floatCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.FLOAT, "element");
+                GroupType listType = listType(Repetition.OPTIONAL, "values", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Float> values) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void floatFromDoubleCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.DOUBLE, "element");
+                GroupType listType = listType(Repetition.OPTIONAL, "values", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Float> values) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(LevelTwoPrimitive.class));
+
+                SchemaFilter filterNonStrict = new SchemaFilter(nonStrictNumericConfig, groupType);
+                assertEquals(groupType, filterNonStrict.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void doubleCollection() {
+                Type repeated = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.DOUBLE, "element");
+                GroupType listType = listType(Repetition.OPTIONAL, "values", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Double> values) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void stringCollection() {
+                Type repeated = Types.primitive(BINARY, Repetition.REPEATED).as(stringType()).named("element");
+                GroupType listType = listType(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelOnePrimitive(String name, List<String> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            enum Category {
+                one, two
+            }
+
+            @Test
+            void enumCollection() {
+                Type repeated = Types.primitive(BINARY, Repetition.REPEATED).as(enumType()).named("element");
+                GroupType listType = listType(Repetition.OPTIONAL, "categories", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelOnePrimitive(String name, List<Category> categories) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void enumToStringCollection() {
+                Type repeated = Types.primitive(BINARY, Repetition.REPEATED).as(enumType()).named("element");
+                GroupType listType = listType(Repetition.OPTIONAL, "categories", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelOnePrimitive(String name, List<String> categories) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void compositeCollection() {
+                GroupType repeated = new GroupType(Repetition.REPEATED, "child", fieldId, fieldAge);
+                GroupType listType = listType(Repetition.OPTIONAL, "child", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record Child(String id, int age) {
+                }
+                record LevelOneComposite(String name, List<Child> child) {
+                }
+
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOneComposite.class));
+            }
+
+            @Test
+            void compositeCollectionMatchFields() {
+                GroupType repeated = new GroupType(Repetition.REPEATED, "child", fieldId, fieldAge, fieldActive);
+                GroupType listType = listType(Repetition.OPTIONAL, "child", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record Child(String id, int age) {
+                }
+                record LevelOneComposite(String name, List<Child> child) {
+                }
+
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                GroupType repeatedExpected = new GroupType(Repetition.REPEATED, "child", fieldId, fieldAge);
+                GroupType listTypeExpected = listType(Repetition.OPTIONAL, "child", repeatedExpected);
+                GroupType groupTypeExpected = new MessageType("foo", fieldName, listTypeExpected);
+                assertEquals(groupTypeExpected, filter.filter(LevelOneComposite.class));
+            }
+
+            @Test
+            void nestedCollectionsWithPrimitivesAreSupported() {
+                Type repeatedChild = new PrimitiveType(Repetition.REPEATED, PrimitiveTypeName.INT32, "element");
+                GroupType listType = listType(Repetition.REPEATED, "element", repeatedChild);
+                GroupType repeated = listType(Repetition.OPTIONAL, "values", listType);
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                record NestedCollections(String name, List<List<Integer>> values) {
+                }
+                assertEquals(groupType, filter.filter(NestedCollections.class));
+
+                record Nested(List<Integer> nested) {
+                }
+                record ValidLevelOneComposite(String name, List<Nested> list) {
+                }
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(ValidLevelOneComposite.class));
+            }
+
+            @Test
+            void nestedCollectionsWithGroupAreSupported() {
+                GroupType repeatedChild = new GroupType(Repetition.REPEATED, "element", fieldId, fieldAge);
+                GroupType listType = listType(Repetition.REPEATED, "element", repeatedChild);
+                GroupType repeated = listType(Repetition.OPTIONAL, "values", listType);
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                record Child(String id, int age) {
+                }
+                record NestedCollections(String name, List<List<Child>> values) {
+                }
+                assertEquals(groupType, filter.filter(NestedCollections.class));
+
+                record Nested(List<Child> nested) {
+                }
+                record ValidLevelOneComposite(String name, List<Nested> list) {
+                }
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(ValidLevelOneComposite.class));
+            }
+        }
+
+        @Nested
+        class ThreeLevelCollection {
+
+            @Test
+            void integerCollection() {
+                Type repeated = new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT32, "element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Integer> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void shortCollection() {
+                Type repeated = new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT32, "element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Short> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(LevelTwoPrimitive.class));
+
+                SchemaFilter filterNonStrict = new SchemaFilter(nonStrictNumericConfig, groupType);
+                assertEquals(groupType, filterNonStrict.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void byteCollection() {
+                Type repeated = new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT32, "element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Byte> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(LevelTwoPrimitive.class));
+
+                SchemaFilter filterNonStrict = new SchemaFilter(nonStrictNumericConfig, groupType);
+                assertEquals(groupType, filterNonStrict.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void longCollection() {
+                Type repeated = new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT64, "element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Long> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void floatCollection() {
+                Type repeated = new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.FLOAT, "element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "values", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Float> values) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void floatFromDoubleCollection() {
+                Type repeated = new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.DOUBLE, "element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "values", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Float> values) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(LevelTwoPrimitive.class));
+
+                SchemaFilter filterNonStrict = new SchemaFilter(nonStrictNumericConfig, groupType);
+                assertEquals(groupType, filterNonStrict.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void doubleCollection() {
+                Type repeated = new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.DOUBLE, "element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "values", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelTwoPrimitive(String name, List<Double> values) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelTwoPrimitive.class));
+            }
+
+            @Test
+            void stringCollection() {
+                Type repeated = Types.primitive(BINARY, Repetition.OPTIONAL).as(stringType()).named("element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "ids", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelOnePrimitive(String name, List<String> ids) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            enum Category {
+                one, two
+            }
+
+            @Test
+            void enumCollection() {
+                Type repeated = Types.primitive(BINARY, Repetition.OPTIONAL).as(enumType()).named("element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "categories", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelOnePrimitive(String name, List<Category> categories) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void enumToStringCollection() {
+                Type repeated = Types.primitive(BINARY, Repetition.OPTIONAL).as(enumType()).named("element");
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "categories", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record LevelOnePrimitive(String name, List<String> categories) {
+
+                }
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOnePrimitive.class));
+            }
+
+            @Test
+            void compositeCollection() {
+                GroupType repeated = new GroupType(Repetition.OPTIONAL, "element", fieldId, fieldAge);
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "child", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record Child(String id, int age) {
+                }
+                record LevelOneComposite(String name, List<Child> child) {
+                }
+
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+                assertEquals(groupType, filter.filter(LevelOneComposite.class));
+            }
+
+            @Test
+            void compositeCollectionMatchFields() {
+                GroupType repeated = new GroupType(Repetition.OPTIONAL, "element", fieldId, fieldAge, fieldActive);
+                GroupType listType = listOfElements(Repetition.OPTIONAL, "child", repeated);
+                GroupType groupType = new MessageType("foo", fieldName, listType);
+
+                record Child(String id, int age) {
+                }
+                record LevelOneComposite(String name, List<Child> child) {
+                }
+
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                GroupType repeatedExpected = new GroupType(Repetition.OPTIONAL, "element", fieldId, fieldAge);
+                GroupType listTypeExpected = listOfElements(Repetition.OPTIONAL, "child", repeatedExpected);
+                GroupType groupTypeExpected = new MessageType("foo", fieldName, listTypeExpected);
+                assertEquals(groupTypeExpected, filter.filter(LevelOneComposite.class));
+            }
+
+            @Test
+            void nestedCollectionsWithPrimitivesAreSupported() {
+                Type repeatedChild = new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT32, "element");
+                GroupType listType = listOfElements(Repetition.REPEATED, "element", repeatedChild);
+                GroupType repeated = listOfElements(Repetition.OPTIONAL, "values", listType);
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                record NestedCollections(String name, List<List<Integer>> values) {
+                }
+                assertEquals(groupType, filter.filter(NestedCollections.class));
+
+                record Nested(List<Integer> nested) {
+                }
+                record ValidLevelOneComposite(String name, List<Nested> list) {
+                }
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(ValidLevelOneComposite.class));
+            }
+
+            @Test
+            void nestedCollectionsWithGroupAreSupported() {
+                GroupType repeatedChild = new GroupType(Repetition.OPTIONAL, "element", fieldId, fieldAge);
+                GroupType listType = listOfElements(Repetition.REPEATED, "element", repeatedChild);
+                GroupType repeated = listOfElements(Repetition.OPTIONAL, "values", listType);
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                record Child(String id, int age) {
+                }
+                record NestedCollections(String name, List<List<Child>> values) {
+                }
+                assertEquals(groupType, filter.filter(NestedCollections.class));
+
+                record Nested(List<Child> nested) {
+                }
+                record ValidLevelOneComposite(String name, List<Nested> list) {
+                }
+                assertThrows(RecordTypeConversionException.class, () -> filter.filter(ValidLevelOneComposite.class));
+            }
         }
 
     }
-
 }
