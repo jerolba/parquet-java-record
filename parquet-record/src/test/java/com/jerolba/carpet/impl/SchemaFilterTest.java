@@ -20,15 +20,16 @@ import org.apache.parquet.schema.Types;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.jerolba.carpet.CarpetReadConfiguration;
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.carpet.impl.read.SchemaFilter;
+import com.jerolba.carpet.impl.read.SchemaValidation;
 import com.jerolba.record.annotation.NotNull;
 
 class SchemaFilterTest {
 
-    CarpetReadConfiguration defaultReadConfig = new CarpetReadConfiguration(false, true);
-    CarpetReadConfiguration nonStrictNumericConfig = new CarpetReadConfiguration(false, false);
+    SchemaValidation defaultReadConfig = new SchemaValidation(false, true);
+    SchemaValidation nonStrictNumericConfig = new SchemaValidation(false, false);
+    SchemaValidation supportMissingFields = new SchemaValidation(true, true);
 
     @Nested
     class FieldInt32Conversion {
@@ -452,12 +453,10 @@ class SchemaFilterTest {
             Type field2 = new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.INT32, "age");
             GroupType groupType = new MessageType("foo", field1, field2);
 
-            CarpetReadConfiguration supportMissingFields = new CarpetReadConfiguration(true, true);
-            SchemaFilter filter = new SchemaFilter(supportMissingFields, groupType);
-
             record MoreThanExisting(String name, int age, boolean active) {
             }
 
+            SchemaFilter filter = new SchemaFilter(supportMissingFields, groupType);
             GroupType expectedAge = new MessageType("foo", field1, field2);
             assertEquals(expectedAge, filter.filter(MoreThanExisting.class));
         }
@@ -540,7 +539,6 @@ class SchemaFilterTest {
             record CompositeMain(String name, Child child) {
             }
 
-            CarpetReadConfiguration supportMissingFields = new CarpetReadConfiguration(true, true);
             SchemaFilter filter = new SchemaFilter(supportMissingFields, groupType);
 
             assertEquals(groupType, filter.filter(CompositeMain.class));
