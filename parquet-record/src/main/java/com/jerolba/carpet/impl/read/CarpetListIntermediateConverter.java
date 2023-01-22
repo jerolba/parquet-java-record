@@ -5,6 +5,7 @@ import static org.apache.parquet.schema.LogicalTypeAnnotation.listType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.mapType;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.io.api.GroupConverter;
@@ -32,26 +33,9 @@ class CarpetListIntermediateConverter extends GroupConverter {
             throw new RecordTypeConversionException(
                     requestedSchema.getName() + " LIST child element can not have more than one field");
         }
+        Consumer<Object> consumer = this::accept;
         Type listElement = fields.get(0);
-        if (listElement.isPrimitive()) {
-            converter = buildPrimitiveGenericConverters(listElement, parameterized.getActualType(), this::accept);
-            return;
-        }
-        LogicalTypeAnnotation logicalType = listElement.getLogicalTypeAnnotation();
-        if (logicalType == listType() && parameterized.isCollection()) {
-            var parameterizedList = parameterized.getParametizedAsCollection();
-            converter = new CarpetListConverter(listElement.asGroupType(), parameterizedList, this::accept);
-            return;
-        }
-        if (logicalType == mapType() && parameterized.isMap()) {
-            var parameterizedMap = parameterized.getParametizedAsMap();
-            converter = new CarpetMapConverter(listElement.asGroupType(), parameterizedMap, this::accept);
-            return;
-
-        }
-        GroupType groupType = listElement.asGroupType();
-        Class<?> listType = parameterized.getActualType();
-        converter = new CarpetGroupConverter(groupType, listType, this::accept);
+        converter = createCollectionConverter(listElement, parameterized, consumer);
     }
 
     @Override
@@ -71,6 +55,26 @@ class CarpetListIntermediateConverter extends GroupConverter {
 
     public void accept(Object value) {
         elementValue = value;
+    }
+
+    public static Converter createCollectionConverter(Type listElement, ParameterizedCollection parameterized,
+            Consumer<Object> consumer) {
+        if (listElement.isPrimitive()) {
+            return buildPrimitiveGenericConverters(listElement, parameterized.getActualType(), consumer);
+        }
+        LogicalTypeAnnotation logicalType = listElement.getLogicalTypeAnnotation();
+        if (logicalType == listType() && parameterized.isCollection()) {
+            var parameterizedList = parameterized.getParametizedAsCollection();
+            return new CarpetListConverter(listElement.asGroupType(), parameterizedList, consumer);
+        }
+        if (logicalType == mapType() && parameterized.isMap()) {
+            var parameterizedMap = parameterized.getParametizedAsMap();
+            return new CarpetMapConverter(listElement.asGroupType(), parameterizedMap, consumer);
+
+        }
+        GroupType groupType = listElement.asGroupType();
+        Class<?> listType = parameterized.getActualType();
+        return new CarpetGroupConverter(groupType, listType, consumer);
     }
 
 }

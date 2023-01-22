@@ -1,15 +1,12 @@
 package com.jerolba.carpet.impl.read;
 
-import static com.jerolba.carpet.impl.read.PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters;
-import static org.apache.parquet.schema.LogicalTypeAnnotation.listType;
-import static org.apache.parquet.schema.LogicalTypeAnnotation.mapType;
+import static com.jerolba.carpet.impl.read.CarpetListIntermediateConverter.createCollectionConverter;
 
 import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.io.api.GroupConverter;
 import org.apache.parquet.schema.GroupType;
-import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.Type;
 
 import com.jerolba.carpet.impl.ParameterizedCollection;
@@ -32,7 +29,7 @@ class CarpetListConverter extends GroupConverter {
         if (threeLevel) {
             converter = new CarpetListIntermediateConverter(listChild, parameterized, listHolder);
         } else {
-            converter = createLevel2Converter(listChild, parameterized, listHolder);
+            converter = createCollectionConverter(listChild, parameterized, listHolder::add);
         }
     }
 
@@ -50,26 +47,6 @@ class CarpetListConverter extends GroupConverter {
     public void end() {
         Object currentRecord = listHolder.end();
         groupConsumer.accept(currentRecord);
-    }
-
-    private Converter createLevel2Converter(Type listElement, ParameterizedCollection parameterized,
-            ListHolder listHolder) {
-        if (listElement.isPrimitive()) {
-            return buildPrimitiveGenericConverters(listElement, parameterized.getActualType(), listHolder::add);
-        }
-        LogicalTypeAnnotation logicalType = listElement.getLogicalTypeAnnotation();
-        if (logicalType == listType() && parameterized.isCollection()) {
-            var parameterizedList = parameterized.getParametizedAsCollection();
-            return new CarpetListConverter(listElement.asGroupType(), parameterizedList, listHolder::add);
-        }
-        if (logicalType == mapType() && parameterized.isMap()) {
-            var parameterizedMap = parameterized.getParametizedAsMap();
-            return new CarpetMapConverter(listElement.asGroupType(), parameterizedMap, listHolder::add);
-
-        }
-        GroupType groupType = listElement.asGroupType();
-        Class<?> listType = parameterized.getActualType();
-        return new CarpetGroupConverter(groupType, listType, listHolder::add);
     }
 
 }
