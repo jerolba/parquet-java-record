@@ -160,19 +160,27 @@ public class SchemaFilter {
         if (parameterized.isCollection() || parameterized.isMap()) {
             LogicalTypeAnnotation typeAnnotation = childElement.getLogicalTypeAnnotation();
             if (typeAnnotation == listType()) {
-                if (parameterized.isCollection()) {
-                    var parameterizedChild = parameterized.getParametizedAsCollection();
-                    Type type = analyzeMultipleLevelStructure(readClass, name, parameterizedChild,
-                            childElement.asGroupType());
-                    Type filtered = rewrapListIfExists(listGroup, type);
-                    return parentGroupType.withNewFields(filtered);
-                } else {
+                if (!parameterized.isCollection()) {
                     throw new RecordTypeConversionException("Field " + name + " of " + readClass.getName()
                             + " is not a collection");
                 }
+                var parameterizedChild = parameterized.getParametizedAsCollection();
+                Type type = analyzeMultipleLevelStructure(readClass, name, parameterizedChild,
+                        childElement.asGroupType());
+                Type filtered = rewrapListIfExists(listGroup, type);
+                return parentGroupType.withNewFields(filtered);
             } else if (typeAnnotation == mapType()) {
-                System.out.println("map");
+                if (!parameterized.isMap()) {
+                    throw new RecordTypeConversionException("Field " + name + " of " + readClass.getName()
+                            + " is not a Map");
+                }
+                var parameterizedChild = parameterized.getParametizedAsMap();
+                Type type = analizeMapStructure(readClass, name, parameterizedChild, childElement.asGroupType());
+                Type filtered = rewrapListIfExists(listGroup, type);
+                return parentGroupType.withNewFields(filtered);
             }
+            throw new RecordTypeConversionException("Field " + name + " of " + readClass.getName()
+                    + " is not a collection");
         }
         if (childElement.isPrimitive()) {
             var primitiveType = childElement.asPrimitiveType();

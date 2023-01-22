@@ -34,6 +34,7 @@ class SchemaFilterTest {
 
     private static final String ELEMENT = "element";
     private static final String MAP_VALUE = "value";
+    private static final String MAP_KEY = "key";
 
     private final SchemaValidation defaultReadConfig = new SchemaValidation(false, true);
     private final SchemaValidation nonStrictNumericConfig = new SchemaValidation(false, false);
@@ -1066,6 +1067,21 @@ class SchemaFilterTest {
                 GroupType expected = new MessageType("foo", fieldName, fieldActive, fieldId);
                 assertEquals(expected, filter.filter(LevelTwoPrimitive.class));
             }
+
+            @Test
+            void nestedMapsAreSupported() {
+                Type key = Types.primitive(BINARY, REQUIRED).as(stringType()).named(MAP_KEY);
+                Type value = new PrimitiveType(OPTIONAL, PrimitiveTypeName.INT32, MAP_VALUE);
+                Type mapType = Types.map(REPEATED).key(key).value(value).named(ELEMENT);
+                GroupType repeated = listType(OPTIONAL, "values", mapType);
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                record NestedMap(String name, List<Map<String, Integer>> values) {
+                }
+                assertEquals(groupType, filter.filter(NestedMap.class));
+            }
         }
 
         @Nested
@@ -1294,6 +1310,20 @@ class SchemaFilterTest {
                 assertEquals(expected, filter.filter(LevelThreePrimitive.class));
             }
 
+            @Test
+            void nestedMapsAreSupported() {
+                Type key = Types.primitive(BINARY, REQUIRED).as(stringType()).named(MAP_KEY);
+                Type value = new PrimitiveType(OPTIONAL, PrimitiveTypeName.INT32, MAP_VALUE);
+                Type mapType = Types.map(REPEATED).key(key).value(value).named(ELEMENT);
+                GroupType repeated = listOfElements(OPTIONAL, "values", mapType);
+                GroupType groupType = new MessageType("foo", fieldName, repeated);
+
+                SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
+
+                record NestedMap(String name, List<Map<String, Integer>> values) {
+                }
+                assertEquals(groupType, filter.filter(NestedMap.class));
+            }
         }
 
     }
@@ -1312,7 +1342,7 @@ class SchemaFilterTest {
             @Nested
             class StringKey {
 
-                Type mapKey = Types.primitive(BINARY, REQUIRED).as(stringType()).named("key");
+                Type mapKey = Types.primitive(BINARY, REQUIRED).as(stringType()).named(MAP_KEY);
 
                 @Test
                 void integerValue() {
@@ -1646,7 +1676,7 @@ class SchemaFilterTest {
 
                 @Test
                 void integerKey() {
-                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT32, "key");
+                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT32, MAP_KEY);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("ids");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1659,7 +1689,7 @@ class SchemaFilterTest {
 
                 @Test
                 void shortKey() {
-                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT32, "key");
+                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT32, MAP_KEY);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("ids");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1675,7 +1705,7 @@ class SchemaFilterTest {
 
                 @Test
                 void byteKey() {
-                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT32, "key");
+                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT32, MAP_KEY);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("ids");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1691,7 +1721,7 @@ class SchemaFilterTest {
 
                 @Test
                 void longKey() {
-                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT64, "key");
+                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT64, MAP_KEY);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("ids");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1704,7 +1734,7 @@ class SchemaFilterTest {
 
                 @Test
                 void floatKey() {
-                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.FLOAT, "key");
+                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.FLOAT, MAP_KEY);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("ids");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1717,7 +1747,7 @@ class SchemaFilterTest {
 
                 @Test
                 void floatFromDoubleKey() {
-                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.DOUBLE, "key");
+                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.DOUBLE, MAP_KEY);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("ids");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1733,7 +1763,7 @@ class SchemaFilterTest {
 
                 @Test
                 void doubleKey() {
-                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.DOUBLE, "key");
+                    Type key = new PrimitiveType(REQUIRED, PrimitiveTypeName.DOUBLE, MAP_KEY);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("ids");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1750,7 +1780,7 @@ class SchemaFilterTest {
 
                 @Test
                 void enumKey() {
-                    Type key = Types.primitive(BINARY, REQUIRED).as(enumType()).named("key");
+                    Type key = Types.primitive(BINARY, REQUIRED).as(enumType()).named(MAP_KEY);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("ids");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1763,7 +1793,7 @@ class SchemaFilterTest {
 
                 @Test
                 void enumToStringKey() {
-                    Type key = Types.primitive(BINARY, REQUIRED).as(enumType()).named("key");
+                    Type key = Types.primitive(BINARY, REQUIRED).as(enumType()).named(MAP_KEY);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("ids");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1776,7 +1806,7 @@ class SchemaFilterTest {
 
                 @Test
                 void compositeKey() {
-                    Type key = new GroupType(REQUIRED, "key", fieldId, fieldAge);
+                    Type key = new GroupType(REQUIRED, MAP_KEY, fieldId, fieldAge);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("child");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1792,7 +1822,7 @@ class SchemaFilterTest {
                 @Test
                 void compositeValueMatchFields() {
                     // Supported, but bad practice remove elements from Key map
-                    Type key = new GroupType(REQUIRED, "key", fieldId, fieldAge, fieldActive);
+                    Type key = new GroupType(REQUIRED, MAP_KEY, fieldId, fieldAge, fieldActive);
                     Type mapType = Types.map(OPTIONAL).key(key).value(value).named("child");
                     GroupType groupType = new MessageType("foo", fieldName, mapType);
 
@@ -1803,7 +1833,7 @@ class SchemaFilterTest {
 
                     SchemaFilter filter = new SchemaFilter(defaultReadConfig, groupType);
 
-                    Type expectedKey = new GroupType(REQUIRED, "key", fieldId, fieldAge);
+                    Type expectedKey = new GroupType(REQUIRED, MAP_KEY, fieldId, fieldAge);
                     Type expectedMapType = Types.map(OPTIONAL).key(expectedKey).value(value).named("child");
                     GroupType groupTypeExpected = new MessageType("foo", fieldName, expectedMapType);
                     assertEquals(groupTypeExpected, filter.filter(MapValueComposite.class));
@@ -1811,8 +1841,8 @@ class SchemaFilterTest {
 
                 @Test
                 void nestedMapsKeyAreNotSupported() {
-                    Type nestedValueId = Types.primitive(BINARY, REQUIRED).as(stringType()).named("key");
-                    Type innerMapKeyType = Types.map(REQUIRED).key(nestedValueId).value(value).named("key");
+                    Type nestedValueId = Types.primitive(BINARY, REQUIRED).as(stringType()).named(MAP_KEY);
+                    Type innerMapKeyType = Types.map(REQUIRED).key(nestedValueId).value(value).named(MAP_KEY);
                     Type count = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT32, MAP_VALUE);
                     Type firstMapType = Types.map(OPTIONAL).key(innerMapKeyType).value(count).named("values");
                     GroupType groupType = new MessageType("foo", fieldName, firstMapType);
@@ -1827,7 +1857,7 @@ class SchemaFilterTest {
                 @Test
                 void nestedCollectionsKeyAreNotSupported() {
                     Type nestedValueId = Types.primitive(BINARY, REQUIRED).as(stringType()).named(ELEMENT);
-                    Type innerListKeyType = listOfElements(REQUIRED, "key", nestedValueId);
+                    Type innerListKeyType = listOfElements(REQUIRED, MAP_KEY, nestedValueId);
                     Type count = new PrimitiveType(REQUIRED, PrimitiveTypeName.INT32, MAP_VALUE);
                     Type firstMapType = Types.map(OPTIONAL).key(innerListKeyType).value(count).named("values");
                     GroupType groupType = new MessageType("foo", fieldName, firstMapType);
