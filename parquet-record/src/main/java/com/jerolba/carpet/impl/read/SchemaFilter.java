@@ -2,6 +2,8 @@ package com.jerolba.carpet.impl.read;
 
 import static com.jerolba.carpet.impl.AliasField.getFieldName;
 import static com.jerolba.carpet.impl.Parameterized.getParameterizedCollection;
+import static com.jerolba.carpet.impl.Parameterized.getParameterizedMap;
+import static com.jerolba.carpet.impl.read.SchemaValidation.isBasicSupportedType;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.listType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.mapType;
@@ -20,6 +22,7 @@ import org.apache.parquet.schema.Type.Repetition;
 
 import com.jerolba.carpet.RecordTypeConversionException;
 import com.jerolba.carpet.impl.ParameterizedCollection;
+import com.jerolba.carpet.impl.ParameterizedMap;
 
 public class SchemaFilter {
 
@@ -67,17 +70,23 @@ public class SchemaFilter {
             GroupType asGroupType = parquetType.asGroupType();
             LogicalTypeAnnotation typeAnnotation = parquetType.getLogicalTypeAnnotation();
             if (typeAnnotation == listType()) {
-                if (Collection.class.isAssignableFrom(recordComponent.getType())) {
-                    var parameterized = getParameterizedCollection(recordComponent);
-                    Type type = analyzeMultipleLevelStructure(readClass, name, parameterized, asGroupType);
-                    inProjection.put(name, type);
-                    continue;
-                } else {
+                if (!Collection.class.isAssignableFrom(recordComponent.getType())) {
                     throw new RecordTypeConversionException("Field " + name + " of " + readClass.getName()
                             + " is not a collection");
                 }
+                var parameterized = getParameterizedCollection(recordComponent);
+                Type type = analyzeMultipleLevelStructure(readClass, name, parameterized, asGroupType);
+                inProjection.put(name, type);
+                continue;
             } else if (typeAnnotation == mapType()) {
-                System.out.println("map");
+                if (!Map.class.isAssignableFrom(recordComponent.getType())) {
+                    throw new RecordTypeConversionException("Field " + name + " of " + readClass.getName()
+                            + " is not a map");
+                }
+                var parameterized = getParameterizedMap(recordComponent);
+                Type type = analizeMapStructure(readClass, name, parameterized, asGroupType);
+                inProjection.put(name, type);
+                continue;
             }
 
             if (recordComponent.getType().isRecord()) {
@@ -138,60 +147,24 @@ public class SchemaFilter {
             throw new RecordTypeConversionException("Nestd list element " + groupChild.getName() + " must be REPEATED");
         }
         if (isThreeLevel(groupChild)) {
-            return analyzeThreeLevelStructure(readClass, name, parameterized, groupType, groupChild);
+            GroupType listGroup = groupChild.asGroupType();
+            Type childGroupChild = listGroup.getFields().get(0);
+            return analyzeListLevelStructure(readClass, name, parameterized, groupType, listGroup, childGroupChild);
         }
-        return analyzeTwoLevelStructure(readClass, name, parameterized, groupType, groupChild);
+        return analyzeListLevelStructure(readClass, name, parameterized, groupType, null, groupChild);
     }
 
-    private Type analyzeTwoLevelStructure(Class<?> readClass, String name, ParameterizedCollection parameterized,
-            GroupType parentGroupType, Type groupChild) {
+    private Type analyzeListLevelStructure(Class<?> readClass, String name, ParameterizedCollection parameterized,
+            GroupType parentGroupType, GroupType listGroup, Type childElement) {
+
         if (parameterized.isCollection() || parameterized.isMap()) {
-            // Is Java child recursive collection or map?
-            LogicalTypeAnnotation typeAnnotation = groupChild.getLogicalTypeAnnotation();
+            LogicalTypeAnnotation typeAnnotation = childElement.getLogicalTypeAnnotation();
             if (typeAnnotation == listType()) {
                 if (parameterized.isCollection()) {
                     var parameterizedChild = parameterized.getParametizedAsCollection();
                     Type type = analyzeMultipleLevelStructure(readClass, name, parameterizedChild,
-                            groupChild.asGroupType());
-                    return parentGroupType.withNewFields(type);
-                } else {
-                    throw new RecordTypeConversionException("Field " + name + " of " + readClass.getName()
-                            + " is not a collection");
-                }
-            } else if (typeAnnotation == mapType()) {
-                System.out.println("map");
-            }
-        }
-        if (groupChild.isPrimitive()) {
-            var primitiveType = groupChild.asPrimitiveType();
-            var actualCollectionType = parameterized.getActualType();
-            validation.validatePrimitiveCompatibility(primitiveType, actualCollectionType);
-            return parentGroupType;
-        }
-        var actualCollectionType = parameterized.getActualType();
-        if (actualCollectionType.isRecord()) {
-            SchemaFilter recordFilter = new SchemaFilter(validation, groupChild.asGroupType());
-            GroupType childMapped = recordFilter.filter(actualCollectionType);
-            return parentGroupType.withNewFields(childMapped);
-        }
-        throw new RecordTypeConversionException("Field " + name + " of type "
-                + actualCollectionType.getName() + " is not a basic type or " + "a Java record");
-    }
-
-    private Type analyzeThreeLevelStructure(Class<?> readClass, String name, ParameterizedCollection parameterized,
-            GroupType parentGroupType, Type listGroupType) {
-
-        GroupType listGroupRepeated = listGroupType.asGroupType();
-        Type groupChild = listGroupRepeated.getFields().get(0);
-
-        if (parameterized.isCollection() || parameterized.isMap()) {
-            LogicalTypeAnnotation typeAnnotation = groupChild.getLogicalTypeAnnotation();
-            if (typeAnnotation == listType()) {
-                if (parameterized.isCollection()) {
-                    var parameterizedChild = parameterized.getParametizedAsCollection();
-                    Type type = analyzeMultipleLevelStructure(readClass, name, parameterizedChild,
-                            groupChild.asGroupType());
-                    GroupType filtered = listGroupRepeated.withNewFields(type);
+                            childElement.asGroupType());
+                    Type filtered = rewrapListIfExists(listGroup, type);
                     return parentGroupType.withNewFields(filtered);
                 } else {
                     throw new RecordTypeConversionException("Field " + name + " of " + readClass.getName()
@@ -201,30 +174,98 @@ public class SchemaFilter {
                 System.out.println("map");
             }
         }
-        if (groupChild.isPrimitive()) {
-            var primitiveType = groupChild.asPrimitiveType();
+        if (childElement.isPrimitive()) {
+            var primitiveType = childElement.asPrimitiveType();
             var actualCollectionType = parameterized.getActualType();
             validation.validatePrimitiveCompatibility(primitiveType, actualCollectionType);
             return parentGroupType;
         }
         var actualCollectionType = parameterized.getActualType();
         if (actualCollectionType.isRecord()) {
-            SchemaFilter recordFilter = new SchemaFilter(validation, groupChild.asGroupType());
+            SchemaFilter recordFilter = new SchemaFilter(validation, childElement.asGroupType());
             GroupType childMapped = recordFilter.filter(actualCollectionType);
-
-            var listGroupMapped = listGroupRepeated.withNewFields(childMapped);
+            Type listGroupMapped = rewrapListIfExists(listGroup, childMapped);
             return parentGroupType.withNewFields(listGroupMapped);
+        }
+        if (isBasicSupportedType(actualCollectionType) && !childElement.isPrimitive()) {
+            throw new RecordTypeConversionException(
+                    childElement.getName() + " is not compatible with " + actualCollectionType.getName());
         }
         throw new RecordTypeConversionException("Field " + name + " of type "
                 + actualCollectionType.getName() + " is not a basic type or " + "a Java record");
     }
 
+    private Type rewrapListIfExists(GroupType listGroupRepeated, Type type) {
+        if (listGroupRepeated == null) {
+            return type;
+        }
+        return listGroupRepeated.withNewFields(type);
+    }
+
+    private Type analizeMapStructure(Class<?> readClass, String name, ParameterizedMap parameterized,
+            GroupType mapType) {
+        if (!hasMapShape(mapType)) {
+            throw new RecordTypeConversionException("Field " + mapType.getName() + " is not a valid map");
+        }
+        GroupType keyValueType = mapType.getFields().get(0).asGroupType();
+
+        // Review Key
+        Type key = keyValueType.getFields().get(0);
+        if (parameterized.keyIsCollection() || parameterized.keyIsMap()) {
+            throw new RecordTypeConversionException("Maps and Collections can not be key of a Map");
+        }
+        Class<?> keyActualType = parameterized.getKeyActualType();
+        if (key.isPrimitive()) {
+            PrimitiveType primitiveType = key.asPrimitiveType();
+            validation.validatePrimitiveCompatibility(primitiveType, keyActualType);
+        } else if (keyActualType.isRecord()) {
+            SchemaFilter recordFilter = new SchemaFilter(validation, key.asGroupType());
+            key = recordFilter.filter(keyActualType);
+        } else {
+            throw new RecordTypeConversionException(keyActualType.getName() + " is not a valid key for a Map");
+        }
+
+        // Review value
+        Type value = keyValueType.getFields().get(1);
+        if (parameterized.valueIsCollection() || parameterized.valueIsMap()) {
+            LogicalTypeAnnotation typeAnnotation = value.getLogicalTypeAnnotation();
+            if (typeAnnotation == listType()) {
+                if (!parameterized.valueIsCollection()) {
+                    throw new RecordTypeConversionException("Field " + name + " of " + readClass.getName()
+                            + " is not a collection");
+                }
+                var parameterizedChild = parameterized.getValueTypeAsCollection();
+                value = analyzeMultipleLevelStructure(readClass, name, parameterizedChild, value.asGroupType());
+            } else if (typeAnnotation == mapType()) {
+                if (!parameterized.valueIsMap()) {
+                    throw new RecordTypeConversionException("Field " + name + " of " + readClass.getName()
+                            + " is not a map");
+                }
+                var parameterizedChild = parameterized.getValueTypeAsMap();
+                value = analizeMapStructure(readClass, name, parameterizedChild, value.asGroupType());
+            }
+        } else {
+            Class<?> valueActualType = parameterized.getValueActualType();
+            if (value.isPrimitive()) {
+                PrimitiveType primitiveType = value.asPrimitiveType();
+                validation.validatePrimitiveCompatibility(primitiveType, valueActualType);
+            } else if (valueActualType.isRecord()) {
+                SchemaFilter recordFilter = new SchemaFilter(validation, value.asGroupType());
+                value = recordFilter.filter(valueActualType);
+            } else {
+                throw new RecordTypeConversionException(valueActualType.getName() + " is not a valid key for a Map");
+            }
+        }
+        Type keyValueRebuild = keyValueType.withNewFields(key, value);
+        return mapType.withNewFields(keyValueRebuild);
+    }
+
     private boolean isThreeLevel(Type child) {
-        // <list-repetition> group <name> (LIST) {
-        // repeated group list { <--child
-        // <element-repetition> <element-type> element;
-        // }
-        // }
+//       <list-repetition> group <name> (LIST) {
+//         repeated group list { <--child
+//           <element-repetition> <element-type> element;
+//         }
+//      }
         if (child.isPrimitive()) {
             return false;
         }
@@ -237,6 +278,34 @@ public class SchemaFilter {
         }
         Type grandChild = asGroup.getFields().get(0);
         if (!grandChild.getName().equals("element")) { // TODO: make configurable
+            return false;
+        }
+        return true;
+    }
+
+    private boolean hasMapShape(GroupType rootGroup) {
+//      optional group ids (MAP) {
+//        repeated group key_value {
+//          required binary key (STRING);
+//          optional int32 value;
+//        }
+//      }
+        if (rootGroup.getFieldCount() != 1) {
+            return false;
+        }
+        Type keyValueType = rootGroup.getFields().get(0);
+        if (!keyValueType.isRepetition(Repetition.REPEATED)) {
+            return false;
+        }
+        if (keyValueType.isPrimitive()) {
+            return false;
+        }
+        GroupType keyValueGroup = keyValueType.asGroupType();
+        if (keyValueGroup.getFieldCount() != 2) {
+            return false;
+        }
+        Type key = keyValueGroup.getFields().get(0);
+        if (!key.isRepetition(Repetition.REQUIRED)) {
             return false;
         }
         return true;

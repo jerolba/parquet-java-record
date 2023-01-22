@@ -43,4 +43,12 @@ public class ParameterizedMap {
         return Parameterized.isMap(valueType);
     }
 
+    public boolean keyIsCollection() {
+        return Parameterized.isCollection(keyType);
+    }
+
+    public boolean keyIsMap() {
+        return Parameterized.isMap(keyType);
+    }
+
 }

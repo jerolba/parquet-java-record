@@ -141,11 +141,39 @@ public class SchemaValidation {
         return throwInvalidConversionException(primitiveType, type);
     }
 
+    public static boolean isBasicSupportedType(Class<?> type) {
+        String typeName = type.getName();
+        if (typeName.equals("int") || typeName.equals("java.lang.Integer")) {
+            return true;
+        }
+        if (typeName.equals("long") || typeName.equals("java.lang.Long")) {
+            return true;
+        }
+        if (typeName.equals("short") || typeName.equals("java.lang.Short")) {
+            return true;
+        }
+        if (typeName.equals("byte") || typeName.equals("java.lang.Byte")) {
+            return false;
+        }
+        if (typeName.equals("double") || typeName.equals("java.lang.Double")) {
+            return true;
+        }
+        if (typeName.equals("float") || typeName.equals("java.lang.Float")) {
+            return true;
+        }
+        if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean")) {
+            return true;
+        }
+        if (type.isEnum()) {
+            return true;
+        }
+        return false;
+    }
+
     public boolean throwInvalidConversionException(PrimitiveType primitiveType, Class<?> type) {
         throw new RecordTypeConversionException(
                 primitiveType.getPrimitiveTypeName().name() + " (" + primitiveType.getName()
-                        + ") can not be converted to "
-                        + type.getName());
+                        + ") can not be converted to " + type.getName());
     }
 
 }
