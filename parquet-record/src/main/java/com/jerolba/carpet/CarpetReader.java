@@ -2,7 +2,6 @@ package com.jerolba.carpet;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -12,22 +11,30 @@ import org.apache.parquet.hadoop.api.ReadSupport;
 import org.apache.parquet.io.api.GroupConverter;
 import org.apache.parquet.io.api.RecordMaterializer;
 import org.apache.parquet.schema.MessageType;
-import org.apache.parquet.schema.Type;
 
 import com.jerolba.carpet.impl.read.CarpetGroupConverter;
+import com.jerolba.carpet.impl.read.SchemaFilter;
+import com.jerolba.carpet.impl.read.SchemaValidation;
 
 public class CarpetReader<T> {
 
+    private final boolean ignoreUnknown = false;
+    private final boolean strictNumericType = false;
+
     public ParquetReader<T> read(Path file, Class<T> readClass) throws IOException {
-        return ParquetReader.builder(new CarpetReadSupport<>(readClass), file).build();
+        CarpetReadConfiguration configuration = new CarpetReadConfiguration(ignoreUnknown, strictNumericType);
+        CarpetReadSupport<T> readSupport = new CarpetReadSupport<>(readClass, configuration);
+        return ParquetReader.builder(readSupport, file).build();
     }
 
     public static class CarpetReadSupport<T> extends ReadSupport<T> {
 
         private final Class<T> readClass;
+        private final CarpetReadConfiguration carpetConfiguration;
 
-        public CarpetReadSupport(Class<T> readClass) {
+        public CarpetReadSupport(Class<T> readClass, CarpetReadConfiguration carpetConfiguration) {
             this.readClass = readClass;
+            this.carpetConfiguration = carpetConfiguration;
         }
 
         @Override
@@ -41,14 +48,11 @@ public class CarpetReader<T> {
                 Map<String, String> keyValueMetaData,
                 MessageType fileSchema) {
 
-            // TODO: match class schema with file schema to make the projection
-            // List<Type> list = fileSchema.getFields().stream().filter(f ->
-            // !f.getName().equals("category")).toList();
-            List<Type> list = fileSchema.getFields();
-
-            MessageType projection = new MessageType(fileSchema.getName(), list);
+            var validation = new SchemaValidation(carpetConfiguration.isIgnoreUnknown(),
+                    carpetConfiguration.isStrictNumericType());
+            SchemaFilter projectedSchema = new SchemaFilter(validation, fileSchema);
+            MessageType projection = projectedSchema.project(readClass);
             Map<String, String> metadata = new LinkedHashMap<>();
-
             return new ReadContext(projection, metadata);
         }
 

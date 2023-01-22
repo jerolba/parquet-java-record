@@ -3,7 +3,9 @@ package com.jerolba.carpet.impl.read;
 import static com.jerolba.carpet.impl.AliasField.getFieldName;
 import static com.jerolba.carpet.impl.Parameterized.getParameterizedCollection;
 import static com.jerolba.carpet.impl.Parameterized.getParameterizedMap;
+import static com.jerolba.carpet.impl.read.SchemaValidation.hasMapShape;
 import static com.jerolba.carpet.impl.read.SchemaValidation.isBasicSupportedType;
+import static com.jerolba.carpet.impl.read.SchemaValidation.isThreeLevel;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.listType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.mapType;
@@ -16,6 +18,7 @@ import java.util.Map;
 
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
+import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Type.Repetition;
@@ -32,6 +35,11 @@ public class SchemaFilter {
     public SchemaFilter(SchemaValidation validation, GroupType schema) {
         this.schema = schema;
         this.validation = validation;
+    }
+
+    public MessageType project(Class<?> readClass) {
+        GroupType projected = filter(readClass);
+        return new MessageType(projected.getName(), projected.getFields());
     }
 
     public GroupType filter(Class<?> readClass) {
@@ -266,57 +274,6 @@ public class SchemaFilter {
         }
         Type keyValueRebuild = keyValueType.withNewFields(key, value);
         return mapType.withNewFields(keyValueRebuild);
-    }
-
-    private boolean isThreeLevel(Type child) {
-//       <list-repetition> group <name> (LIST) {
-//         repeated group list { <--child
-//           <element-repetition> <element-type> element;
-//         }
-//      }
-        if (child.isPrimitive()) {
-            return false;
-        }
-        GroupType asGroup = child.asGroupType();
-        if (!asGroup.getName().equals("list")) { // TODO: make configurable
-            return false;
-        }
-        if (asGroup.getFieldCount() > 1) {
-            return false;
-        }
-        Type grandChild = asGroup.getFields().get(0);
-        if (!grandChild.getName().equals("element")) { // TODO: make configurable
-            return false;
-        }
-        return true;
-    }
-
-    private boolean hasMapShape(GroupType rootGroup) {
-//      optional group ids (MAP) {
-//        repeated group key_value {
-//          required binary key (STRING);
-//          optional int32 value;
-//        }
-//      }
-        if (rootGroup.getFieldCount() != 1) {
-            return false;
-        }
-        Type keyValueType = rootGroup.getFields().get(0);
-        if (!keyValueType.isRepetition(Repetition.REPEATED)) {
-            return false;
-        }
-        if (keyValueType.isPrimitive()) {
-            return false;
-        }
-        GroupType keyValueGroup = keyValueType.asGroupType();
-        if (keyValueGroup.getFieldCount() != 2) {
-            return false;
-        }
-        Type key = keyValueGroup.getFields().get(0);
-        if (!key.isRepetition(Repetition.REQUIRED)) {
-            return false;
-        }
-        return true;
     }
 
 }

@@ -83,7 +83,9 @@ public class TwoLevelStructureWriter {
         recordConsumer.startField("element", 0);
         Collection<?> coll = (Collection<?>) value;
         for (var v : coll) {
-            // TODO: review null?
+            if (v == null) {
+                throw new NullPointerException("2-level list structures doesn't support null values");
+            }
             innerStructureWriter.accept(recordConsumer, v);
         }
         recordConsumer.endField("element", 0);

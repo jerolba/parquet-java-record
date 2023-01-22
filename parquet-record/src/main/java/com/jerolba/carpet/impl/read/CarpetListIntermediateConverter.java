@@ -1,5 +1,6 @@
 package com.jerolba.carpet.impl.read;
 
+import static com.jerolba.carpet.impl.read.PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.listType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.mapType;
 
@@ -20,8 +21,9 @@ class CarpetListIntermediateConverter extends GroupConverter {
     private final ListHolder listHolder;
     private Object elementValue;
 
-    public CarpetListIntermediateConverter(GroupType requestedSchema, ParameterizedCollection parameterized,
+    public CarpetListIntermediateConverter(Type rootListType, ParameterizedCollection parameterized,
             ListHolder listHolder) {
+        var requestedSchema = rootListType.asGroupType();
         System.out.println(requestedSchema);
         this.listHolder = listHolder;
 
@@ -32,8 +34,7 @@ class CarpetListIntermediateConverter extends GroupConverter {
         }
         Type listElement = fields.get(0);
         if (listElement.isPrimitive()) {
-            converter = PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters(listElement,
-                    parameterized.getActualType(), this::accept);
+            converter = buildPrimitiveGenericConverters(listElement, parameterized.getActualType(), this::accept);
             return;
         }
         LogicalTypeAnnotation logicalType = listElement.getLogicalTypeAnnotation();

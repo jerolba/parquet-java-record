@@ -23,7 +23,6 @@ class CarpetMapConverter extends GroupConverter {
         this.mapHolder = new MapHolder();
         System.out.println(requestedSchema);
 
-        // Discover converters
         List<Type> fields = requestedSchema.getFields();
         if (fields.size() > 1) {
             throw new RecordTypeConversionException(

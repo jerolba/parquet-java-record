@@ -1,5 +1,6 @@
 package com.jerolba.carpet.impl.read;
 
+import static com.jerolba.carpet.impl.read.PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.listType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.mapType;
 
@@ -36,8 +37,7 @@ class CarpetMapIntermediateConverter extends GroupConverter {
         // Key
         Type mapKeyType = fields.get(0);
         if (mapKeyType.isPrimitive()) {
-            converterKey = PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters(mapKeyType,
-                    parameterized.getKeyActualType(),
+            converterKey = buildPrimitiveGenericConverters(mapKeyType, parameterized.getKeyActualType(),
                     this::consumeKey);
         } else {
             GroupType mapKeyGroupType = mapKeyType.asGroupType();
@@ -48,8 +48,7 @@ class CarpetMapIntermediateConverter extends GroupConverter {
         // Value
         Type mapValueType = fields.get(1);
         if (mapValueType.isPrimitive()) {
-            converterValue = PrimitiveGenericConverterFactory.buildPrimitiveGenericConverters(mapValueType,
-                    parameterized.getValueActualType(),
+            converterValue = buildPrimitiveGenericConverters(mapValueType, parameterized.getValueActualType(),
                     this::consumeValue);
             return;
         }

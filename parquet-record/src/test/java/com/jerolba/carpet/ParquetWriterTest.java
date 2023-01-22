@@ -95,4 +95,9 @@ public class ParquetWriterTest<T> {
         Path filePath = new Path(path);
         return new CarpetReader<T>().read(filePath, type);
     }
+
+    public <R> ParquetReader<R> getCarpetReader(Class<R> readType) throws IOException {
+        Path filePath = new Path(path);
+        return new CarpetReader<R>().read(filePath, readType);
+    }
 }

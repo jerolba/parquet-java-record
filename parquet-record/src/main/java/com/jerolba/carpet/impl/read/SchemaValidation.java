@@ -6,6 +6,7 @@ import static org.apache.parquet.schema.LogicalTypeAnnotation.stringType;
 
 import java.lang.reflect.RecordComponent;
 
+import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
@@ -176,4 +177,54 @@ public class SchemaValidation {
                         + ") can not be converted to " + type.getName());
     }
 
+    public static boolean isThreeLevel(Type child) {
+//      <list-repetition> group <name> (LIST) {
+//        repeated group list { <--child
+//          <element-repetition> <element-type> element;
+//        }
+//     }
+        if (child.isPrimitive()) {
+            return false;
+        }
+        GroupType asGroup = child.asGroupType();
+        if (!asGroup.getName().equals("list")) { // TODO: make configurable
+            return false;
+        }
+        if (asGroup.getFieldCount() > 1) {
+            return false;
+        }
+        Type grandChild = asGroup.getFields().get(0);
+        if (!grandChild.getName().equals("element")) { // TODO: make configurable
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean hasMapShape(GroupType rootGroup) {
+//     optional group ids (MAP) {
+//       repeated group key_value {
+//         required binary key (STRING);
+//         optional int32 value;
+//       }
+//     }
+        if (rootGroup.getFieldCount() != 1) {
+            return false;
+        }
+        Type keyValueType = rootGroup.getFields().get(0);
+        if (!keyValueType.isRepetition(Repetition.REPEATED)) {
+            return false;
+        }
+        if (keyValueType.isPrimitive()) {
+            return false;
+        }
+        GroupType keyValueGroup = keyValueType.asGroupType();
+        if (keyValueGroup.getFieldCount() != 2) {
+            return false;
+        }
+        Type key = keyValueGroup.getFields().get(0);
+        if (!key.isRepetition(Repetition.REQUIRED)) {
+            return false;
+        }
+        return true;
+    }
 }
