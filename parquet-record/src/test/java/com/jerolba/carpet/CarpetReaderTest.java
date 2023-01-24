@@ -151,7 +151,7 @@ class CarpetReaderTest {
     }
 
     @Nested
-    class ThreeLevelCollection {
+    class OneLevelCollection {
 
         @Test
         void collectionPrimitive() throws IOException {
@@ -161,7 +161,8 @@ class CarpetReaderTest {
 
             var rec1 = new CollectionPrimitive("foo", List.of(1, 2, 3));
             var rec2 = new CollectionPrimitive("bar", null);
-            var writerTest = new ParquetWriterTest<>(CollectionPrimitive.class);
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitive.class)
+                    .withLevel(AnnotatedLevels.ONE);
             writerTest.write(rec1, rec2);
 
             var reader = writerTest.getCarpetReader();
@@ -177,7 +178,8 @@ class CarpetReaderTest {
 
             var rec1 = new CollectionPrimitive("foo", 10, List.of(1, 2, 3));
             var rec2 = new CollectionPrimitive("bar", 0, null);
-            var writerTest = new ParquetWriterTest<>(CollectionPrimitive.class);
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitive.class)
+                    .withLevel(AnnotatedLevels.ONE);
             writerTest.write(rec1, rec2);
 
             record CollectionFiltered(String name, int size) {
@@ -192,19 +194,15 @@ class CarpetReaderTest {
         }
 
         @Test
-        void collectionPrimitiveNullValues() throws IOException {
+        void collectionPrimitiveNullValuesNotSupported() throws IOException {
 
             record CollectionPrimitive(String name, List<Integer> sizes) {
             }
 
             var rec1 = new CollectionPrimitive("foo", asList(1, null, 3));
-            var rec2 = new CollectionPrimitive("bar", null);
-            var writerTest = new ParquetWriterTest<>(CollectionPrimitive.class);
-            writerTest.write(rec1, rec2);
-
-            var reader = writerTest.getCarpetReader();
-            assertEquals(rec1, reader.read());
-            assertEquals(rec2, reader.read());
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitive.class)
+                    .withLevel(AnnotatedLevels.ONE);
+            assertThrows(NullPointerException.class, () -> writerTest.write(rec1));
         }
 
         @Test
@@ -213,9 +211,10 @@ class CarpetReaderTest {
             record CollectionPrimitiveString(String name, List<String> sizes) {
             }
 
-            var rec1 = new CollectionPrimitiveString("foo", asList("1", null, "3"));
+            var rec1 = new CollectionPrimitiveString("foo", List.of("1", "2", "3"));
             var rec2 = new CollectionPrimitiveString("bar", null);
-            var writerTest = new ParquetWriterTest<>(CollectionPrimitiveString.class);
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitiveString.class)
+                    .withLevel(AnnotatedLevels.ONE);
             writerTest.write(rec1, rec2);
 
             var reader = writerTest.getCarpetReader();
@@ -233,9 +232,10 @@ class CarpetReaderTest {
             record CollectionPrimitiveEnum(String name, List<Category> category) {
             }
 
-            var rec1 = new CollectionPrimitiveEnum("foo", asList(Category.one, null, Category.three));
+            var rec1 = new CollectionPrimitiveEnum("foo", asList(Category.one, Category.two, Category.three));
             var rec2 = new CollectionPrimitiveEnum("bar", null);
-            var writerTest = new ParquetWriterTest<>(CollectionPrimitiveEnum.class);
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitiveEnum.class)
+                    .withLevel(AnnotatedLevels.ONE);
             writerTest.write(rec1, rec2);
 
             var reader = writerTest.getCarpetReader();
@@ -252,10 +252,10 @@ class CarpetReaderTest {
             record CollectionComposite(String name, List<ChildItem> status) {
             }
 
-            var rec1 = new CollectionComposite("foo",
-                    asList(new ChildItem("1", false), null, new ChildItem("2", true)));
+            var rec1 = new CollectionComposite("foo", List.of(new ChildItem("1", false), new ChildItem("2", true)));
             var rec2 = new CollectionComposite("bar", null);
-            var writerTest = new ParquetWriterTest<>(CollectionComposite.class);
+            var writerTest = new ParquetWriterTest<>(CollectionComposite.class)
+                    .withLevel(AnnotatedLevels.ONE);
             writerTest.write(rec1, rec2);
 
             var reader = writerTest.getCarpetReader();
@@ -272,10 +272,12 @@ class CarpetReaderTest {
             record CollectionComposite(String name, List<ChildItem> status) {
             }
 
-            var rec1 = new CollectionComposite("foo",
-                    asList(new ChildItem("1", 10, false), null, new ChildItem("2", 20, true)));
+            var rec1 = new CollectionComposite("foo", List.of(
+                    new ChildItem("1", 10, false),
+                    new ChildItem("2", 20, true)));
             var rec2 = new CollectionComposite("bar", null);
-            var writerTest = new ParquetWriterTest<>(CollectionComposite.class);
+            var writerTest = new ParquetWriterTest<>(CollectionComposite.class)
+                    .withLevel(AnnotatedLevels.ONE);
             writerTest.write(rec1, rec2);
 
             record ChildItemProjected(int size, String id) {
@@ -285,8 +287,7 @@ class CarpetReaderTest {
             }
 
             var expectedRec1 = new CollectionProjected("foo",
-                    asList(new ChildItemProjected(10, "1"),
-                            null,
+                    List.of(new ChildItemProjected(10, "1"),
                             new ChildItemProjected(20, "2")));
             var expectedRec2 = new CollectionProjected("bar", null);
 
@@ -301,12 +302,12 @@ class CarpetReaderTest {
             record CollectionNestedMap(String name, List<Map<String, Boolean>> status) {
             }
 
-            var rec1 = new CollectionNestedMap("even",
-                    asList(Map.of("1", false, "2", true),
-                            null,
-                            Map.of("3", false, "4", true)));
+            var rec1 = new CollectionNestedMap("even", List.of(
+                    Map.of("1", false, "2", true),
+                    Map.of("3", false, "4", true)));
             var rec2 = new CollectionNestedMap("bar", null);
-            var writerTest = new ParquetWriterTest<>(CollectionNestedMap.class);
+            var writerTest = new ParquetWriterTest<>(CollectionNestedMap.class)
+                    .withLevel(AnnotatedLevels.ONE);
             writerTest.write(rec1, rec2);
 
             var reader = writerTest.getCarpetReader();
@@ -320,14 +321,11 @@ class CarpetReaderTest {
             record CollectionNestedCollectionPrimitive(String name, List<List<Integer>> status) {
             }
 
-            var rec1 = new CollectionNestedCollectionPrimitive("foo", asList(asList(1, null, 3), null));
+            var rec1 = new CollectionNestedCollectionPrimitive("foo", List.of(List.of(1, 2, 3)));
             var rec2 = new CollectionNestedCollectionPrimitive("bar", null);
-            var writerTest = new ParquetWriterTest<>(CollectionNestedCollectionPrimitive.class);
-            writerTest.write(rec1, rec2);
-
-            var reader = writerTest.getCarpetReader();
-            assertEquals(rec1, reader.read());
-            assertEquals(rec2, reader.read());
+            var writerTest = new ParquetWriterTest<>(CollectionNestedCollectionPrimitive.class)
+                    .withLevel(AnnotatedLevels.ONE);
+            assertThrows(RecordTypeConversionException.class, () -> writerTest.write(rec1, rec2));
         }
 
         @Test
@@ -340,19 +338,11 @@ class CarpetReaderTest {
             }
 
             var rec1 = new CollectionNestedCollectionComposite("foo",
-                    asList(
-                            asList(
-                                    new ChildItem("1", false),
-                                    null,
-                                    new ChildItem("2", true)),
-                            null));
+                    List.of(List.of(new ChildItem("1", false), new ChildItem("2", true))));
             var rec2 = new CollectionNestedCollectionComposite("bar", null);
-            var writerTest = new ParquetWriterTest<>(CollectionNestedCollectionComposite.class);
-            writerTest.write(rec1, rec2);
-
-            var reader = writerTest.getCarpetReader();
-            assertEquals(rec1, reader.read());
-            assertEquals(rec2, reader.read());
+            var writerTest = new ParquetWriterTest<>(CollectionNestedCollectionComposite.class)
+                    .withLevel(AnnotatedLevels.ONE);
+            assertThrows(RecordTypeConversionException.class, () -> writerTest.write(rec1, rec2));
         }
     }
 
@@ -560,6 +550,212 @@ class CarpetReaderTest {
         }
     }
 
+    @Nested
+    class ThreeLevelCollection {
+
+        @Test
+        void collectionPrimitive() throws IOException {
+
+            record CollectionPrimitive(String name, List<Integer> sizes) {
+            }
+
+            var rec1 = new CollectionPrimitive("foo", List.of(1, 2, 3));
+            var rec2 = new CollectionPrimitive("bar", null);
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitive.class);
+            writerTest.write(rec1, rec2);
+
+            var reader = writerTest.getCarpetReader();
+            assertEquals(rec1, reader.read());
+            assertEquals(rec2, reader.read());
+        }
+
+        @Test
+        void collectionFilteredByProjection() throws IOException {
+
+            record CollectionPrimitive(String name, int size, List<Integer> sizes) {
+            }
+
+            var rec1 = new CollectionPrimitive("foo", 10, List.of(1, 2, 3));
+            var rec2 = new CollectionPrimitive("bar", 0, null);
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitive.class);
+            writerTest.write(rec1, rec2);
+
+            record CollectionFiltered(String name, int size) {
+            }
+
+            var expectedRec1 = new CollectionFiltered("foo", 10);
+            var expectedRec2 = new CollectionFiltered("bar", 0);
+
+            var reader = writerTest.getCarpetReader(CollectionFiltered.class);
+            assertEquals(expectedRec1, reader.read());
+            assertEquals(expectedRec2, reader.read());
+        }
+
+        @Test
+        void collectionPrimitiveNullValues() throws IOException {
+
+            record CollectionPrimitive(String name, List<Integer> sizes) {
+            }
+
+            var rec1 = new CollectionPrimitive("foo", asList(1, null, 3));
+            var rec2 = new CollectionPrimitive("bar", null);
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitive.class);
+            writerTest.write(rec1, rec2);
+
+            var reader = writerTest.getCarpetReader();
+            assertEquals(rec1, reader.read());
+            assertEquals(rec2, reader.read());
+        }
+
+        @Test
+        void collectionPrimitiveString() throws IOException {
+
+            record CollectionPrimitiveString(String name, List<String> sizes) {
+            }
+
+            var rec1 = new CollectionPrimitiveString("foo", asList("1", null, "3"));
+            var rec2 = new CollectionPrimitiveString("bar", null);
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitiveString.class);
+            writerTest.write(rec1, rec2);
+
+            var reader = writerTest.getCarpetReader();
+            assertEquals(rec1, reader.read());
+            assertEquals(rec2, reader.read());
+        }
+
+        @Test
+        void collectionPrimitiveEnum() throws IOException {
+
+            enum Category {
+                one, two, three
+            }
+
+            record CollectionPrimitiveEnum(String name, List<Category> category) {
+            }
+
+            var rec1 = new CollectionPrimitiveEnum("foo", asList(Category.one, null, Category.three));
+            var rec2 = new CollectionPrimitiveEnum("bar", null);
+            var writerTest = new ParquetWriterTest<>(CollectionPrimitiveEnum.class);
+            writerTest.write(rec1, rec2);
+
+            var reader = writerTest.getCarpetReader();
+            assertEquals(rec1, reader.read());
+            assertEquals(rec2, reader.read());
+        }
+
+        @Test
+        void collectionComposite() throws IOException {
+
+            record ChildItem(String id, boolean active) {
+            }
+
+            record CollectionComposite(String name, List<ChildItem> status) {
+            }
+
+            var rec1 = new CollectionComposite("foo",
+                    asList(new ChildItem("1", false), null, new ChildItem("2", true)));
+            var rec2 = new CollectionComposite("bar", null);
+            var writerTest = new ParquetWriterTest<>(CollectionComposite.class);
+            writerTest.write(rec1, rec2);
+
+            var reader = writerTest.getCarpetReader();
+            assertEquals(rec1, reader.read());
+            assertEquals(rec2, reader.read());
+        }
+
+        @Test
+        void collectionCompositeProjected() throws IOException {
+
+            record ChildItem(String id, int size, boolean active) {
+            }
+
+            record CollectionComposite(String name, List<ChildItem> status) {
+            }
+
+            var rec1 = new CollectionComposite("foo",
+                    asList(new ChildItem("1", 10, false), null, new ChildItem("2", 20, true)));
+            var rec2 = new CollectionComposite("bar", null);
+            var writerTest = new ParquetWriterTest<>(CollectionComposite.class);
+            writerTest.write(rec1, rec2);
+
+            record ChildItemProjected(int size, String id) {
+            }
+
+            record CollectionProjected(String name, List<ChildItemProjected> status) {
+            }
+
+            var expectedRec1 = new CollectionProjected("foo",
+                    asList(new ChildItemProjected(10, "1"),
+                            null,
+                            new ChildItemProjected(20, "2")));
+            var expectedRec2 = new CollectionProjected("bar", null);
+
+            var reader = writerTest.getCarpetReader(CollectionProjected.class);
+            assertEquals(expectedRec1, reader.read());
+            assertEquals(expectedRec2, reader.read());
+        }
+
+        @Test
+        void collectionNestedMap() throws IOException {
+
+            record CollectionNestedMap(String name, List<Map<String, Boolean>> status) {
+            }
+
+            var rec1 = new CollectionNestedMap("even",
+                    asList(Map.of("1", false, "2", true),
+                            null,
+                            Map.of("3", false, "4", true)));
+            var rec2 = new CollectionNestedMap("bar", null);
+            var writerTest = new ParquetWriterTest<>(CollectionNestedMap.class);
+            writerTest.write(rec1, rec2);
+
+            var reader = writerTest.getCarpetReader();
+            assertEquals(rec1, reader.read());
+            assertEquals(rec2, reader.read());
+        }
+
+        @Test
+        void collectionNestedCollectionPrimitive() throws IOException {
+
+            record CollectionNestedCollectionPrimitive(String name, List<List<Integer>> status) {
+            }
+
+            var rec1 = new CollectionNestedCollectionPrimitive("foo", asList(asList(1, null, 3), null));
+            var rec2 = new CollectionNestedCollectionPrimitive("bar", null);
+            var writerTest = new ParquetWriterTest<>(CollectionNestedCollectionPrimitive.class);
+            writerTest.write(rec1, rec2);
+
+            var reader = writerTest.getCarpetReader();
+            assertEquals(rec1, reader.read());
+            assertEquals(rec2, reader.read());
+        }
+
+        @Test
+        void collectionNestedCollectionComposite() throws IOException {
+
+            record ChildItem(String id, boolean active) {
+            }
+
+            record CollectionNestedCollectionComposite(String name, List<List<ChildItem>> status) {
+            }
+
+            var rec1 = new CollectionNestedCollectionComposite("foo",
+                    asList(
+                            asList(
+                                    new ChildItem("1", false),
+                                    null,
+                                    new ChildItem("2", true)),
+                            null));
+            var rec2 = new CollectionNestedCollectionComposite("bar", null);
+            var writerTest = new ParquetWriterTest<>(CollectionNestedCollectionComposite.class);
+            writerTest.write(rec1, rec2);
+
+            var reader = writerTest.getCarpetReader();
+            assertEquals(rec1, reader.read());
+            assertEquals(rec2, reader.read());
+        }
+    }
+
     @Test
     void nestedMapStringKeyPrimitiveValue() throws IOException {
 
@@ -573,8 +769,8 @@ class CarpetReaderTest {
         var writerTest = new ParquetWriterTest<>(NestedMapStringKeyPrimitiveValue.class);
         writerTest.write(rec1, rec2);
         var reader = writerTest.getCarpetReader();
-        System.out.println(reader.read());
-        System.out.println(reader.read());
+        assertEquals(rec1, reader.read());
+        assertEquals(rec2, reader.read());
     }
 
     @Test
@@ -590,8 +786,8 @@ class CarpetReaderTest {
         var writerTest = new ParquetWriterTest<>(NestedMapStringKeyStringValue.class);
         writerTest.write(rec1, rec2);
         var reader = writerTest.getCarpetReader();
-        System.out.println(reader.read());
-        System.out.println(reader.read());
+        assertEquals(rec1, reader.read());
+        assertEquals(rec2, reader.read());
     }
 
     @Test
@@ -610,8 +806,8 @@ class CarpetReaderTest {
         var writerTest = new ParquetWriterTest<>(NestedMapPrimitiveKeyRecordValue.class);
         writerTest.write(rec1, rec2);
         var reader = writerTest.getCarpetReader();
-        System.out.println(reader.read());
-        System.out.println(reader.read());
+        assertEquals(rec1, reader.read());
+        assertEquals(rec2, reader.read());
     }
 
     @Test
@@ -628,8 +824,8 @@ class CarpetReaderTest {
         var writerTest = new ParquetWriterTest<>(NestedMapPrimitiveKeyListPrimitiveValue.class);
         writerTest.write(rec1, rec2);
         var reader = writerTest.getCarpetReader();
-        System.out.println(reader.read());
-        System.out.println(reader.read());
+        assertEquals(rec1, reader.read());
+        assertEquals(rec2, reader.read());
     }
 
     @Test
@@ -640,7 +836,6 @@ class CarpetReaderTest {
         }
 
         record CompositeKey(String a, String b) {
-
         }
 
         record NestedMapRecordKeyMapValue(String name, Map<CompositeKey, Map<Category, String>> metrics) {
@@ -654,8 +849,8 @@ class CarpetReaderTest {
         var writerTest = new ParquetWriterTest<>(NestedMapRecordKeyMapValue.class);
         writerTest.write(rec1, rec2);
         var reader = writerTest.getCarpetReader();
-        System.out.println(reader.read());
-        System.out.println(reader.read());
+        assertEquals(rec1, reader.read());
+        assertEquals(rec2, reader.read());
     }
 
     @Test

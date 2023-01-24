@@ -2,6 +2,8 @@ package com.jerolba.carpet.impl.read;
 
 import static com.jerolba.carpet.impl.Parameterized.getParameterizedCollection;
 import static com.jerolba.carpet.impl.Parameterized.getParameterizedMap;
+import static com.jerolba.carpet.impl.read.PrimitiveConverterFactory.buildPrimitiveConverters;
+import static com.jerolba.carpet.impl.read.SingleLevelConverterFactory.createSingleLevelConverter;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.listType;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.mapType;
 
@@ -12,6 +14,7 @@ import org.apache.parquet.io.api.Converter;
 import org.apache.parquet.io.api.GroupConverter;
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
+import org.apache.parquet.schema.Type.Repetition;
 
 import com.jerolba.carpet.RecordTypeConversionException;
 
@@ -38,10 +41,10 @@ public class CarpetGroupConverter extends GroupConverter {
                 throw new RecordTypeConversionException(
                         groupClass.getName() + " doesn't have an attribute called " + name);
             }
-
-            if (schemaField.isPrimitive()) {
-                converters[cont] = PrimitiveConverterFactory.buildPrimitiveConverters(schemaField, constructor, index,
-                        recordComponent);
+            if (schemaField.isRepetition(Repetition.REPEATED)) {
+                converters[cont] = createSingleLevelConverter(schemaField, constructor, index, recordComponent);
+            } else if (schemaField.isPrimitive()) {
+                converters[cont] = buildPrimitiveConverters(schemaField, constructor, index, recordComponent);
             } else {
                 GroupType asGroupType = schemaField.asGroupType();
                 LogicalTypeAnnotation logicalType = asGroupType.getLogicalTypeAnnotation();
@@ -76,7 +79,6 @@ public class CarpetGroupConverter extends GroupConverter {
     @Override
     public void start() {
         Arrays.fill(constructor.c, null);
-
     }
 
     @Override

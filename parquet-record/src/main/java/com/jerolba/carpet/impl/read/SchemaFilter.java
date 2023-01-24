@@ -121,10 +121,16 @@ public class SchemaFilter {
                     + readClass.getName() + " is not a collection");
         }
         var parameterized = getParameterizedCollection(recordComponent);
-        if (parameterized.isCollection() || parameterized.isMap()) {
+        if (parameterized.isCollection()) {
             // Is Java child recursive collection or map?
             throw new RecordTypeConversionException(
                     "1-level collections can no embed nested collections (List<List<?>>)");
+        }
+        if (parameterized.isMap()) {
+            var parameterizedChild = parameterized.getParametizedAsMap();
+            Type type = analizeMapStructure(readClass, parquetType.getName(), parameterizedChild,
+                    parquetType.asGroupType());
+            return type;
         }
         if (parquetType.isPrimitive()) {
             // if collection type is Java "primitive"

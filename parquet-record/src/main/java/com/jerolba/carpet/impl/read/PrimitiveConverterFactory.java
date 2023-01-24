@@ -11,6 +11,7 @@ import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type;
 
 import com.jerolba.carpet.RecordTypeConversionException;
+import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 import com.jerolba.carpet.impl.read.converter.BooleanConverter;
 import com.jerolba.carpet.impl.read.converter.EnumConverter;
 import com.jerolba.carpet.impl.read.converter.FromDoubleToDoubleConverter;
@@ -29,9 +30,8 @@ import com.jerolba.carpet.impl.read.converter.StringConverter;
 
 class PrimitiveConverterFactory {
 
-    public static Converter buildPrimitiveConverters(Type parquetField, ReadReflection.ConstructorParams constructor,
-            int index,
-            RecordComponent recordComponent) {
+    public static Converter buildPrimitiveConverters(Type parquetField, ConstructorParams constructor,
+            int index, RecordComponent recordComponent) {
 
         PrimitiveTypeName type = parquetField.asPrimitiveType().getPrimitiveTypeName();
         switch (type) {
@@ -53,7 +53,7 @@ class PrimitiveConverterFactory {
         throw new RecordTypeConversionException(type + " deserialization not supported");
     }
 
-    public static Converter buildFromInt64Converter(ReadReflection.ConstructorParams constructor, int index,
+    public static Converter buildFromInt64Converter(ConstructorParams constructor, int index,
             RecordComponent recordComponent) {
         Class<?> type = recordComponent.getType();
         String typeName = type.getName();
@@ -73,7 +73,7 @@ class PrimitiveConverterFactory {
                 typeName + " not compatible with " + recordComponent.getName() + " field");
     }
 
-    public static Converter buildFromInt32(ReadReflection.ConstructorParams constructor, int index,
+    public static Converter buildFromInt32(ConstructorParams constructor, int index,
             RecordComponent recordComponent) {
         Class<?> type = recordComponent.getType();
         String typeName = type.getName();
@@ -93,7 +93,7 @@ class PrimitiveConverterFactory {
                 typeName + " not compatible with " + recordComponent.getName() + " field");
     }
 
-    public static Converter buildFromDoubleConverter(ReadReflection.ConstructorParams constructor, int index,
+    public static Converter buildFromDoubleConverter(ConstructorParams constructor, int index,
             RecordComponent recordComponent) {
         Class<?> type = recordComponent.getType();
         String typeName = type.getName();
@@ -107,7 +107,7 @@ class PrimitiveConverterFactory {
                 typeName + " not compatible with " + recordComponent.getName() + " field");
     }
 
-    public static Converter buildFromFloatConverter(ReadReflection.ConstructorParams constructor, int index,
+    public static Converter buildFromFloatConverter(ConstructorParams constructor, int index,
             RecordComponent recordComponent) {
         Class<?> type = recordComponent.getType();
         String typeName = type.getName();
@@ -121,7 +121,7 @@ class PrimitiveConverterFactory {
                 typeName + " not compatible with " + recordComponent.getName() + " field");
     }
 
-    public static Converter buildFromBooleanConverter(ReadReflection.ConstructorParams constructor, int index,
+    public static Converter buildFromBooleanConverter(ConstructorParams constructor, int index,
             RecordComponent recordComponent) {
         Class<?> type = recordComponent.getType();
         String typeName = type.getName();
@@ -132,7 +132,7 @@ class PrimitiveConverterFactory {
                 typeName + " not compatible with " + recordComponent.getName() + " field");
     }
 
-    public static Converter buildFromBinaryConverter(ReadReflection.ConstructorParams constructor, int index,
+    public static Converter buildFromBinaryConverter(ConstructorParams constructor, int index,
             RecordComponent recordComponent, Type schemaType) {
         Class<?> type = recordComponent.getType();
         String typeName = type.getName();
