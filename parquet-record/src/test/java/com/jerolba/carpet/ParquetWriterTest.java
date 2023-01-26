@@ -23,6 +23,10 @@ import com.jerolba.parquet.record.ParquetRecordReader;
 
 public class ParquetWriterTest<T> {
 
+    public enum Flag {
+        STRICT_NUMERIC_TYPE, IGNORE_UNKNOWN;
+    }
+
     private final Class<T> type;
     private String path;
     private AnnotatedLevels level = AnnotatedLevels.THREE;
@@ -96,8 +100,18 @@ public class ParquetWriterTest<T> {
         return new CarpetReader<T>().read(filePath, type);
     }
 
-    public <R> ParquetReader<R> getCarpetReader(Class<R> readType) throws IOException {
+    public <R> ParquetReader<R> getCarpetReader(Class<R> readType, Flag... flags) throws IOException {
         Path filePath = new Path(path);
-        return new CarpetReader<R>().read(filePath, readType);
+
+        CarpetReader<R> reader = new CarpetReader<>();
+        for (Flag f : flags) {
+            if (f.equals(Flag.IGNORE_UNKNOWN)) {
+                reader = reader.ignoreUnknown(true);
+            }
+            if (f.equals(Flag.STRICT_NUMERIC_TYPE)) {
+                reader = reader.strictNumericType(true);
+            }
+        }
+        return reader.read(filePath, readType);
     }
 }

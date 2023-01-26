@@ -4,16 +4,15 @@ import org.apache.parquet.column.Dictionary;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.io.api.PrimitiveConverter;
 
-import com.jerolba.carpet.impl.read.ReadReflection;
 import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 
 public class StringConverter extends PrimitiveConverter {
 
     private String[] dict = null;
-    private final ReadReflection.ConstructorParams constructor;
+    private final ConstructorParams constructor;
     private final int idx;
 
-    public StringConverter(ReadReflection.ConstructorParams constructor, int idx) {
+    public StringConverter(ConstructorParams constructor, int idx) {
         this.constructor = constructor;
         this.idx = idx;
     }

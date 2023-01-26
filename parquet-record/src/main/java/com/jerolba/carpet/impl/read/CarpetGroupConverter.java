@@ -17,16 +17,17 @@ import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.Type.Repetition;
 
 import com.jerolba.carpet.RecordTypeConversionException;
+import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 
 public class CarpetGroupConverter extends GroupConverter {
 
     private final Converter[] converters;
-    private final ReadReflection.ConstructorParams constructor;
+    private final ConstructorParams constructor;
     private final Consumer<Object> groupConsumer;
 
     public CarpetGroupConverter(GroupType requestedSchema, Class<?> groupClass, Consumer<Object> groupConsumer) {
         this.groupConsumer = groupConsumer;
-        this.constructor = new ReadReflection.ConstructorParams(groupClass);
+        this.constructor = new ConstructorParams(groupClass);
         System.out.println(requestedSchema);
 
         GroupFieldsMapper mapper = new GroupFieldsMapper(groupClass);

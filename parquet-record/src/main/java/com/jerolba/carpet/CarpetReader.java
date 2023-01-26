@@ -18,8 +18,19 @@ import com.jerolba.carpet.impl.read.SchemaValidation;
 
 public class CarpetReader<T> {
 
-    private final boolean ignoreUnknown = false;
-    private final boolean strictNumericType = false;
+    // TODO: inject values via config reader. Which default values?
+    private boolean ignoreUnknown = false;
+    private boolean strictNumericType = false;
+
+    public CarpetReader<T> ignoreUnknown(boolean ignoreUnknown) {
+        this.ignoreUnknown = ignoreUnknown;
+        return this;
+    }
+
+    public CarpetReader<T> strictNumericType(boolean strictNumericType) {
+        this.strictNumericType = strictNumericType;
+        return this;
+    }
 
     public ParquetReader<T> read(Path file, Class<T> readClass) throws IOException {
         CarpetReadConfiguration configuration = new CarpetReadConfiguration(ignoreUnknown, strictNumericType);
