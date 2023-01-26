@@ -4,18 +4,23 @@ import org.apache.parquet.io.api.PrimitiveConverter;
 
 import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 
-public class FromInt64ToLongConverter extends PrimitiveConverter {
+public class FromDecimalToDoubleConverter extends PrimitiveConverter {
 
     private final ConstructorParams constructor;
     private final int idx;
 
-    public FromInt64ToLongConverter(ConstructorParams constructor, int idx) {
+    public FromDecimalToDoubleConverter(ConstructorParams constructor, int idx) {
         this.constructor = constructor;
         this.idx = idx;
     }
 
     @Override
-    public void addLong(long value) {
+    public void addFloat(float value) {
+        constructor.c[idx] = (double) value;
+    }
+
+    @Override
+    public void addDouble(double value) {
         constructor.c[idx] = value;
     }
 

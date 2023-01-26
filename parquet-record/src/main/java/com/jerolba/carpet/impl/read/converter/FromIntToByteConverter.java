@@ -4,19 +4,24 @@ import org.apache.parquet.io.api.PrimitiveConverter;
 
 import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 
-public class FromDoubleToDoubleConverter extends PrimitiveConverter {
+public class FromIntToByteConverter extends PrimitiveConverter {
 
     private final ConstructorParams constructor;
     private final int idx;
 
-    public FromDoubleToDoubleConverter(ConstructorParams constructor, int idx) {
+    public FromIntToByteConverter(ConstructorParams constructor, int idx) {
         this.constructor = constructor;
         this.idx = idx;
     }
 
     @Override
-    public void addDouble(double value) {
-        constructor.c[idx] = value;
+    public void addInt(int value) {
+        constructor.c[idx] = (byte) value;
+    }
+
+    @Override
+    public void addLong(long value) {
+        constructor.c[idx] = (byte) value;
     }
 
 }

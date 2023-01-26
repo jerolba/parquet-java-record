@@ -4,12 +4,17 @@ import java.util.function.Consumer;
 
 import org.apache.parquet.io.api.PrimitiveConverter;
 
-public class FromInt32ToByteGenericConverter extends PrimitiveConverter {
+public class FromIntToByteGenericConverter extends PrimitiveConverter {
 
     private final Consumer<Object> listConsumer;
 
-    public FromInt32ToByteGenericConverter(Consumer<Object> listConsumer) {
+    public FromIntToByteGenericConverter(Consumer<Object> listConsumer) {
         this.listConsumer = listConsumer;
+    }
+
+    @Override
+    public void addLong(long value) {
+        listConsumer.accept((byte) value);
     }
 
     @Override

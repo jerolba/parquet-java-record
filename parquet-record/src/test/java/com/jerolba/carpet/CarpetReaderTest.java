@@ -238,6 +238,51 @@ class CarpetReaderTest {
             var readerStrict = writerTest.getCarpetReader(ToIntegerRead.class, STRICT_NUMERIC_TYPE);
             assertThrows(RecordTypeConversionException.class, () -> readerStrict.read());
         }
+
+        @Test
+        void toShort() throws IOException {
+            record ToShort(String name, long fromLong, Long fromLongObj, int fromInteger, Integer fromIntegerObj) {
+            }
+            var rec1 = new ToShort("Apple", 1L, 2L, 3, 4);
+            var rec2 = new ToShort("Sony", 5, null, 6, null);
+            var writerTest = new ParquetWriterTest<>(ToShort.class);
+            writerTest.write(rec1, rec2);
+
+            record ToShortRead(String name, short fromLong, Short fromLongObj, short fromInteger,
+                    Short fromIntegerObj) {
+            }
+
+            var recExpected1 = new ToShortRead("Apple", (short) 1, (short) 2, (short) 3, (short) 4);
+            var recExpected2 = new ToShortRead("Sony", (short) 5, null, (short) 6, null);
+            var reader = writerTest.getCarpetReader(ToShortRead.class);
+            assertEquals(recExpected1, reader.read());
+            assertEquals(recExpected2, reader.read());
+
+            var readerStrict = writerTest.getCarpetReader(ToShortRead.class, STRICT_NUMERIC_TYPE);
+            assertThrows(RecordTypeConversionException.class, () -> readerStrict.read());
+        }
+
+        @Test
+        void toByte() throws IOException {
+            record ToByte(String name, long fromLong, Long fromLongObj, int fromInteger, Integer fromIntegerObj) {
+            }
+            var rec1 = new ToByte("Apple", 1L, 2L, 3, 4);
+            var rec2 = new ToByte("Sony", 5, null, 6, null);
+            var writerTest = new ParquetWriterTest<>(ToByte.class);
+            writerTest.write(rec1, rec2);
+
+            record ToByteRead(String name, byte fromLong, Byte fromLongObj, byte fromInteger, Byte fromIntegerObj) {
+            }
+
+            var recExpected1 = new ToByteRead("Apple", (byte) 1, (byte) 2, (byte) 3, (byte) 4);
+            var recExpected2 = new ToByteRead("Sony", (byte) 5, null, (byte) 6, null);
+            var reader = writerTest.getCarpetReader(ToByteRead.class);
+            assertEquals(recExpected1, reader.read());
+            assertEquals(recExpected2, reader.read());
+
+            var readerStrict = writerTest.getCarpetReader(ToByteRead.class, STRICT_NUMERIC_TYPE);
+            assertThrows(RecordTypeConversionException.class, () -> readerStrict.read());
+        }
     }
 
     @Nested

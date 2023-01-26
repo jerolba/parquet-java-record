@@ -4,19 +4,24 @@ import org.apache.parquet.io.api.PrimitiveConverter;
 
 import com.jerolba.carpet.impl.read.ReadReflection.ConstructorParams;
 
-public class FromInt32ToShortConverter extends PrimitiveConverter {
+public class FromIntToLongConverter extends PrimitiveConverter {
 
     private final ConstructorParams constructor;
     private final int idx;
 
-    public FromInt32ToShortConverter(ConstructorParams constructor, int idx) {
+    public FromIntToLongConverter(ConstructorParams constructor, int idx) {
         this.constructor = constructor;
         this.idx = idx;
     }
 
     @Override
     public void addInt(int value) {
-        constructor.c[idx] = (short) value;
+        constructor.c[idx] = (long) value;
+    }
+
+    @Override
+    public void addLong(long value) {
+        constructor.c[idx] = value;
     }
 
 }
